@@ -1,0 +1,73 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "User data service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api/v1/",
+    "paths": {
+        "/save_csv": {
+            "post": {
+                "tags": [
+                    "Save CSV"
+                ],
+                "summary": "Принимает csv файл и сохраняет информацию в БД",
+                "operationId": "save csv",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Загружаемый csv",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_errors.AppError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "app_errors.AppError": {
+            "type": "object",
+            "required": [
+                "code",
+                "message",
+                "name",
+                "status"
+            ],
+            "properties": {
+                "code": {
+                    "description": "Код ошибки",
+                    "type": "integer",
+                    "example": 26002
+                },
+                "message": {
+                    "description": "Сообщение ошибки",
+                    "type": "string",
+                    "example": "entity not found"
+                },
+                "name": {
+                    "description": "Наименование ошибки",
+                    "type": "string",
+                    "example": "NotFound"
+                },
+                "status": {
+                    "description": "Статус код ответа",
+                    "type": "integer",
+                    "example": 404
+                }
+            }
+        }
+    }
+}

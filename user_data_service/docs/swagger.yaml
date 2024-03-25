@@ -1,0 +1,51 @@
+basePath: /api/v1/
+definitions:
+  app_errors.AppError:
+    properties:
+      code:
+        description: Код ошибки
+        example: 26002
+        type: integer
+      message:
+        description: Сообщение ошибки
+        example: entity not found
+        type: string
+      name:
+        description: Наименование ошибки
+        example: NotFound
+        type: string
+      status:
+        description: Статус код ответа
+        example: 404
+        type: integer
+    required:
+    - code
+    - message
+    - name
+    - status
+    type: object
+info:
+  contact: {}
+  title: User data service API
+  version: "1.0"
+paths:
+  /save_csv:
+    post:
+      operationId: save csv
+      parameters:
+      - description: Загружаемый csv
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_errors.AppError'
+      summary: Принимает csv файл и сохраняет информацию в БД
+      tags:
+      - Save CSV
+swagger: "2.0"
