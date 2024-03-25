@@ -3,8 +3,8 @@ import mediapipe as mp
 import numpy as np
 import math
 import csv
-import os
 import shutil
+import uuid
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -154,10 +154,13 @@ def get_features(video_path, pass_frame=2):
     return features
 
 
-def create_csv(id, filepath, is_tired):
-    header = ['id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label']
+def create_csv(timestamp, filepath, is_tired):
+    user_id = 5
 
-    with open(f'{id}.csv', 'w', encoding='UTF8') as f:
+    video_id = str(uuid.uuid4())
+    header = ['video_id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label', 'user_id']
+
+    with open(f'{timestamp}.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
 
         # write the header
@@ -167,9 +170,9 @@ def create_csv(id, filepath, is_tired):
         for row in features:
             # write the row
             if is_tired:
-                writer.writerow([id, *row, 1])
+                writer.writerow([video_id, *row, 1, user_id])
             else:
-                writer.writerow([id, *row, 0])
+                writer.writerow([video_id, *row, 0, user_id])
         print("Создание... " + filepath)
 
 
