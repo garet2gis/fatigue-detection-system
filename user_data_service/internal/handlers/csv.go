@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
@@ -33,9 +34,17 @@ func (c *CoreHandler) SaveCSV(w http.ResponseWriter, r *http.Request) error {
 		}
 	}(file)
 
-	err = c.dataRepository.CopyCSV(r.Context(), file)
-	if err != nil {
-		return err
+	txErr := c.transactor.WithinTransaction(r.Context(), func(txCtx context.Context) error {
+		err = c.dataRepository.CopyCSV(txCtx, file)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return txErr
 	}
 
 	api.WriteSuccess(r.Context(), w, struct{}{}, http.StatusNoContent, l)

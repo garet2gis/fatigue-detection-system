@@ -29,7 +29,7 @@ func main() {
 	}
 	//validate := validator.New()
 
-	coreHandler := handlers.NewCoreHandler(data.NewRepository(dbClient), l)
+	coreHandler := handlers.NewCoreHandler(data.NewRepository(dbClient), dbClient, l)
 
 	app := server.NewServer(cfg.ToAppConfig(), coreHandler.Router(), l)
 

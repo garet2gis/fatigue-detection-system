@@ -3,31 +3,37 @@ package data
 import (
 	"context"
 	"encoding/csv"
+	sq "github.com/Masterminds/squirrel"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 	"io"
 	"mime/multipart"
 	"strconv"
 )
 
 const (
-	VideoTable    = "video_features"
-	FeaturesTable = "videos"
+	FeaturesTable   = "video_features"
+	UsedVideosTable = "used_videos"
 )
 
 type Repository struct {
-	db postgresql.DB
+	db           postgresql.DB
+	queryBuilder sq.StatementBuilderType
 }
 
 func NewRepository(db postgresql.DB) *Repository {
-	return &Repository{db: db}
+	return &Repository{db: db, queryBuilder: sq.StatementBuilder.PlaceholderFormat(sq.Dollar)}
 }
 
-func (r *Repository) CopyCSV(ctx context.Context, file multipart.File) error {
-	reader := csv.NewReader(file)
+func (r *Repository) CopyCSV(ctx context.Context, csvFile multipart.File) error {
+	reader := csv.NewReader(csvFile)
 	header, _ := reader.Read()
 
-	var rows [][]interface{}
+	batchLen := 250
+	rows := make([][]interface{}, 0, batchLen)
 
 	for {
 		record, err := reader.Read()
@@ -52,11 +58,43 @@ func (r *Repository) CopyCSV(ctx context.Context, file multipart.File) error {
 		}
 
 		rows = append(rows, row)
+		if len(rows) == batchLen {
+			_, err = r.db.Client(ctx).CopyFrom(ctx, pgx.Identifier{FeaturesTable}, header, pgx.CopyFromRows(rows))
+			if err != nil {
+				return err
+			}
+
+			rows = make([][]interface{}, 0, batchLen)
+		}
 	}
 
-	_, err := r.db.Client(ctx).CopyFrom(ctx, pgx.Identifier{VideoTable}, header, pgx.CopyFromRows(rows))
-	if err != nil {
-		return err
+	if len(rows) > 0 {
+		_, err := r.db.Client(ctx).CopyFrom(ctx, pgx.Identifier{FeaturesTable}, header, pgx.CopyFromRows(rows))
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+func (r *Repository) CreateUsedVideo(ctx context.Context, videoID string) error {
+	l := logger.EntryWithRequestIDFromContext(ctx)
+	setMap := sq.Eq{
+		"video_id": videoID,
+	}
+
+	qb := r.queryBuilder.
+		Insert(UsedVideosTable)
+
+	qb = qb.SetMap(setMap)
+	q, i, _ := qb.ToSql()
+
+	_, err := r.db.Client(ctx).Exec(ctx, q, i...)
+	if err != nil {
+		l.With(zap.Error(err), zap.String("query", q)).Error("failed to exec query")
+		return app_errors.ErrSQLExec.SetMessage(err.Error())
+	}
+
 	return nil
 }

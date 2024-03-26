@@ -6,6 +6,7 @@ import (
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
@@ -17,17 +18,20 @@ import (
 
 type DataRepository interface {
 	CopyCSV(ctx context.Context, file multipart.File) error
+	CreateUsedVideo(ctx context.Context, videoID string) error
 }
 
 type CoreHandler struct {
 	dataRepository DataRepository
+	transactor     postgresql.Transactor
 
 	logger *zap.Logger
 }
 
-func NewCoreHandler(dataRepository DataRepository, logger *zap.Logger) *CoreHandler {
+func NewCoreHandler(dataRepository DataRepository, transactor postgresql.Transactor, logger *zap.Logger) *CoreHandler {
 	return &CoreHandler{
 		dataRepository: dataRepository,
+		transactor:     transactor,
 		logger:         logger,
 	}
 }

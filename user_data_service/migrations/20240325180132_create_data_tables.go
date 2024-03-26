@@ -12,11 +12,9 @@ func init() {
 
 func upCreateDataTables(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, `
-	CREATE TABLE videos
+	CREATE TABLE used_videos
 	(
-	    video_id CHAR(36),
-	    timestamp TIMESTAMP,
-	    is_used BOOLEAN DEFAULT 'f'
+	    video_id CHAR(36) PRIMARY KEY
 	);`)
 
 	if err != nil {
