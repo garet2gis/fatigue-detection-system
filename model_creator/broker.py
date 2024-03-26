@@ -1,5 +1,6 @@
 import pika
 import json
+from model_creator import create_xgb
 
 
 class Broker:
@@ -23,9 +24,11 @@ class Broker:
         try:
             ids = json.loads(body)
 
-            df = self.repository.get_user_features(ids)
+            df = self.repository.get_all_features()
 
             print("Records with ids {}: \n{}".format(ids, df))
+
+            create_xgb(df)
 
         except Exception as e:
             print("Error processing message:", e)
