@@ -18,9 +18,10 @@ def create_input():
 
 
 class LoginWindow(QWidget):
-    def __init__(self):
+    def __init__(self, app_config):
         super().__init__()
         self.initUI()
+        self.app_config = app_config
 
     def initUI(self):
         self.setGeometry(300, 300, 400, 250)
@@ -61,7 +62,7 @@ class LoginWindow(QWidget):
         username = self.user_input.text()
         password = self.pass_input.text()
         if check_login(username, password):
-            self.training_window = MainWindow()
+            self.training_window = MainWindow(self.app_config.upload_csv_url)
             self.training_window.show()
 
             self.close()

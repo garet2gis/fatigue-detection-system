@@ -3,8 +3,9 @@ import mediapipe as mp
 import numpy as np
 import math
 import csv
-import shutil
-import uuid
+import os
+import logging
+from api.http import send_csv_file
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -154,13 +155,13 @@ def get_features(video_path, pass_frame=2):
     return features
 
 
-def create_csv(timestamp, filepath, is_tired):
+def upload_features_from_video(video_id, filepath, is_tired, url):
     user_id = 5
 
-    video_id = str(uuid.uuid4())
     header = ['video_id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label', 'user_id']
 
-    with open(f'{timestamp}.csv', 'w', encoding='UTF8') as f:
+    csv_filename = f'{video_id}.csv'
+    with open(csv_filename, 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
 
         # write the header
@@ -173,12 +174,21 @@ def create_csv(timestamp, filepath, is_tired):
                 writer.writerow([video_id, *row, 1, user_id])
             else:
                 writer.writerow([video_id, *row, 0, user_id])
-        print("Создание... " + filepath)
+
+        logging.info("Создание... " + filepath)
+
+    send_csv_file(csv_filename, url)
+
+    # удаляем csv
+    delete_csv_file(csv_filename)
 
 
-#     TODO: upload csv
-
-
-def delete_csv(filepath):
-    shutil.rmtree("./data.csv")
-    print("Удаление... " + filepath)
+def delete_csv_file(file_path):
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logging.info("Файл успешно удален с диска.")
+        else:
+            logging.warning("Файл не найден.")
+    except Exception as e:
+        logging.error(f"Произошла ошибка при удалении файла: {str(e)}")

@@ -8,8 +8,9 @@ import time
 from vidgear.gears import CamGear, WriteGear
 import shutil
 from datetime import datetime
+import uuid
 
-from preprocess.preprocess_video_to_csv import create_csv
+from preprocess.preprocess_video_to_csv import upload_features_from_video
 
 
 def create_label(label):
@@ -20,9 +21,10 @@ def create_label(label):
 
 
 class MainWindow(QWidget):
-    def __init__(self):
+    def __init__(self, upload_csv_url):
         self.tired_path = os.path.join('videos', 'tired')
         self.awake_path = os.path.join('videos', 'awake')
+        self.upload_csv_url = upload_csv_url
         super().__init__()
         self.initUI()
 
@@ -62,8 +64,6 @@ class MainWindow(QWidget):
         bottom_layout.addWidget(self.awake_files_count)
         bottom_layout.addWidget(self.open_awake_folder_button)
 
-
-
         self.layout.addLayout(top_layout)
         self.layout.addLayout(bottom_layout)
         self.layout.addWidget(self.init_video_capture_button)
@@ -102,7 +102,8 @@ class MainWindow(QWidget):
 
         stream = CamGear(source=1, **options).start()
 
-        filename = f"{datetime.now()}.mp4"
+        video_id = str(uuid.uuid4())
+        filename = f"{video_id}.mp4"
 
         writer = WriteGear(output=filename)
 
@@ -123,21 +124,20 @@ class MainWindow(QWidget):
         stream.stop()
         writer.close()
 
-        self.ask_if_tired(filename)
+        self.ask_if_tired(video_id, filename)
 
-    def ask_if_tired(self, filename):
+    def ask_if_tired(self, video_id, filename):
         reply = QMessageBox.question(self, 'Состояние', 'Вы устали?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-
             tired_path = './videos/tired'
             shutil.move(filename, tired_path)
-            create_csv(os.path.splitext(filename)[0], os.path.join(tired_path, filename), True)
+            upload_features_from_video(video_id, os.path.join(tired_path, filename), True, self.upload_csv_url)
 
         else:
             awake_path = './videos/awake'
             shutil.move(filename, awake_path)
-            create_csv(os.path.splitext(filename)[0], os.path.join(awake_path, filename), True)
+            upload_features_from_video(video_id, os.path.join(awake_path, filename), True, self.upload_csv_url)
 
 
 def count_files(path):
