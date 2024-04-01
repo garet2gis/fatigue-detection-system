@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold, cross_validate, train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score
 import xgboost
+import logging
 
 
 def create_xgb(data):
@@ -49,7 +50,7 @@ def create_xgb(data):
     cv_scores = cross_val_score(xgb, X_test, y_test, cv=5)
 
     # Вывод результатов
-    print("Cross-validation scores:", cv_scores)
-    print("Average accuracy:", cv_scores.mean())
+    logging.info("Cross-validation scores:", cv_scores)
+    logging.info("Average accuracy:", cv_scores.mean())
 
     xgb.save_model('./models/xgb.xgb')

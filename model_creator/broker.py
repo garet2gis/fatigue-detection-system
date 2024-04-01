@@ -1,6 +1,7 @@
 import pika
 import json
 from model_creator import create_xgb
+import logging
 
 
 class Broker:
@@ -26,12 +27,14 @@ class Broker:
 
             df = self.repository.get_all_features()
 
-            print("Records with ids {}: \n{}".format(ids, df))
+            logging.info("Records with ids {}: \n{}".format(ids, df))
 
             create_xgb(df)
 
+
+
         except Exception as e:
-            print("Error processing message:", e)
+            logging.error("Error processing message:", e)
 
     def start_consuming(self):
         self.channel.basic_consume(queue=self.queue_name, on_message_callback=self.callback, auto_ack=True)
