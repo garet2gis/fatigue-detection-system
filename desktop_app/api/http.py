@@ -7,7 +7,7 @@ def send_csv_file(file_path, url):
         with open(file_path, 'rb') as file:
             files = {'file': file}
             response = requests.post(url, files=files)
-            if response.status_code == 200:
+            if str(response.status_code).startswith('2'):
                 logging.info(f"Файл успешно отправлен по HTTP: {file_path}")
             else:
                 logging.warning(f"Произошла ошибка при отправке файла: {response.status_code}")
