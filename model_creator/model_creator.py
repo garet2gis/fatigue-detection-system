@@ -4,9 +4,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, cross_val_score
 import xgboost
 import logging
+import os
+import requests
 
 
-def create_xgb(data):
+def create_xgb(data, url):
     data = data.drop(columns=['video_id'])
     data = data.drop(columns=['frame_count'])
     data = data.drop(columns=['user_id'])
@@ -53,4 +55,31 @@ def create_xgb(data):
     logging.info("Cross-validation scores:", cv_scores)
     logging.info("Average accuracy:", cv_scores.mean())
 
-    xgb.save_model('./models/xgb.xgb')
+    file_path = './models/xgb.xgb'
+    xgb.save_model(file_path)
+    send_file(file_path, url)
+    delete_file(file_path)
+
+
+def delete_file(file_path):
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logging.info("Файл успешно удален с диска.")
+        else:
+            logging.warning("Файл не найден.")
+    except Exception as e:
+        logging.error(f"Произошла ошибка при удалении файла: {str(e)}")
+
+
+def send_file(file_path, url):
+    try:
+        with open(file_path, 'rb') as file:
+            files = {'file': file}
+            response = requests.post(url, files=files)
+            if response.status_code == 200:
+                logging.info(f"Файл успешно отправлен по HTTP: {file_path}")
+            else:
+                logging.warning(f"Произошла ошибка при отправке файла: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Произошла ошибка: {str(e)}")

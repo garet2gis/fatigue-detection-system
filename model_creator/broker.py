@@ -5,10 +5,12 @@ import logging
 
 
 class Broker:
-    def __init__(self, queue_name, repository, rabbitmq_host='localhost', rabbitmq_port=5672, rabbitmq_user='user',
+    def __init__(self, model_storage_url, queue_name, repository, rabbitmq_host='localhost', rabbitmq_port=5672,
+                 rabbitmq_user='user',
                  rabbitmq_pass='password'):
         self.queue_name = queue_name
         self.repository = repository
+        self.model_storage_url = model_storage_url
         self.rabbitmq_host = rabbitmq_host
         self.rabbitmq_port = rabbitmq_port
         self.rabbitmq_user = rabbitmq_user
@@ -29,7 +31,7 @@ class Broker:
 
             logging.info("Records with ids {}: \n{}".format(ids, df))
 
-            create_xgb(df)
+            create_xgb(df, self.model_storage_url)
 
 
 

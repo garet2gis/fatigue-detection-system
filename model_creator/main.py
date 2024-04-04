@@ -13,6 +13,8 @@ POSTGRESQL_USER = os.environ.get('DB_USERNAME')
 POSTGRESQL_PASSWORD = os.environ.get('DB_PASSWORD')
 POSTGRESQL_PORT = os.environ.get('DB_PORT')
 
+MODEL_STORAGE_URL = os.environ.get('MODEL_STORAGE_URL')
+
 if __name__ == '__main__':
     setup_logger()
     logging.info("start model creator service")
@@ -20,7 +22,7 @@ if __name__ == '__main__':
     engine_str = f'postgresql://{POSTGRESQL_USER}:{POSTGRESQL_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DBNAME}'
     repository = Repository(engine_str)
 
-    consumer = Broker(queue_name=RABBITMQ_QUEUE, repository=repository)
+    consumer = Broker(model_storage_url=MODEL_STORAGE_URL, queue_name=RABBITMQ_QUEUE, repository=repository)
 
     consumer.connect()
     consumer.start_consuming()
