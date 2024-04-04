@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	_ "github.com/garet2gis/fatigue-detection-system/model_storage_service/docs"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/internal/config"
+	"github.com/garet2gis/fatigue-detection-system/model_storage_service/internal/handlers"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/logger"
+	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/postgresql"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/s3_client"
-	"os"
+	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/server"
 )
 
 //	@title		Model storage service
@@ -20,26 +21,24 @@ func main() {
 
 	l := logger.NewLogger(cfg.ToLoggerConfig())
 
-	//dbClient, err := postgresql.NewClient(context.Background(), cfg.ToDBConfig())
-	//if err != nil {
-	//	l.Fatal(err.Error())
-	//}
+	dbClient, err := postgresql.NewClient(context.Background(), cfg.ToDBConfig())
+	if err != nil {
+		l.Fatal(err.Error())
+	}
 
 	s3Client, err := s3_client.NewS3Client(context.Background(), cfg.ToS3Config())
 	if err != nil {
 		l.Fatal(err.Error())
 	}
 
-	fileToUpload := "./lol.jpeg"
-	file, err := os.Open(fileToUpload)
-	if err != nil {
-		fmt.Println("failed to open file, ", err)
-		return
-	}
-	defer file.Close()
+	coreHandler := handlers.NewCoreHandler(s3Client, dbClient, l)
 
-	err = s3Client.UploadFile(context.Background(), "test_file.jpg", file)
-	if err != nil {
-		l.Fatal(err.Error())
-	}
+	app := server.NewServer(cfg.ToAppConfig(), coreHandler.Router(), l)
+
+	app.SetShutdownCallback(func(_ context.Context) error {
+		dbClient.Close()
+		return nil
+	})
+
+	app.Start()
 }

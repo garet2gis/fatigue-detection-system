@@ -142,8 +142,8 @@ func (s *S3Client) GetFile(ctx context.Context, fileName string) (io.ReadCloser,
 	return output.Body, nil
 }
 
-func (s *S3Client) UploadFile(ctx context.Context, key string, file io.Reader) error {
-	op := "s3_client.S3Client.UploadFile"
+func (s *S3Client) SaveFile(ctx context.Context, key string, file io.Reader) error {
+	op := "s3_client.S3Client.SaveFile"
 	input := &s3.PutObjectInput{
 		Bucket: aws.String(s.bucketName),
 		Key:    aws.String(key),
