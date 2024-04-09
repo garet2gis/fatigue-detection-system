@@ -17,8 +17,8 @@ import (
 )
 
 type DataRepository interface {
-	CopyCSV(ctx context.Context, file multipart.File) error
-	CreateUsedVideo(ctx context.Context, videoID string) error
+	SaveFaceVideoFeatures(ctx context.Context, file multipart.File) (uint64, error)
+	IncrementFeaturesCount(ctx context.Context, userID string, faceFeaturesCount uint64) error
 }
 
 type CoreHandler struct {
@@ -66,6 +66,12 @@ func ErrorMiddleware(handler ErrorHandlerFunc) http.HandlerFunc {
 
 			l := logger.EntryWithRequestIDFromContext(r.Context())
 
+			if !appErr.IsNotLogging {
+				// увеличиваю уровень логирования stacktrace до panic,
+				// чтобы в логе не было бесполезного stacktrace
+				l.WithOptions(zap.AddStacktrace(zap.DPanicLevel)).Error(err.Error())
+			}
+
 			api.WriteError(r.Context(), w, appErr.ToCoreError(), l)
 		}
 	}
@@ -77,7 +83,11 @@ func (c *CoreHandler) Router() chi.Router {
 	router.Use(InitRequestID)
 	router.Use(logger.WithLogger(c.logger))
 
-	router.Post("/api/v1/save_csv", ErrorMiddleware(c.SaveCSV))
+	router.Route("/api/v1", func(router chi.Router) {
+		router.Route("/face_model", func(router chi.Router) {
+			router.Post("/save_features", ErrorMiddleware(c.SaveVideoFeatures))
+		})
+	})
 
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		l := logger.EntryWithRequestIDFromContext(r.Context())

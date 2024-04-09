@@ -16,12 +16,12 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/save_csv": {
+        "/face_model/save_features": {
             "post": {
                 "tags": [
                     "Save CSV"
                 ],
-                "summary": "Принимает csv файл и сохраняет информацию в БД",
+                "summary": "Принимает csv файл с фичами из видео",
                 "operationId": "save csv",
                 "parameters": [
                     {

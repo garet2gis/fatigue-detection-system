@@ -29,7 +29,7 @@ info:
   title: User data service API
   version: "1.0"
 paths:
-  /save_csv:
+  /face_model/save_features:
     post:
       operationId: save csv
       parameters:
@@ -45,7 +45,7 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/app_errors.AppError'
-      summary: Принимает csv файл и сохраняет информацию в БД
+      summary: Принимает csv файл с фичами из видео
       tags:
       - Save CSV
 swagger: "2.0"

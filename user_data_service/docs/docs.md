@@ -31,16 +31,16 @@
 
 | Method  | URI     | Name   | Summary |
 |---------|---------|--------|---------|
-| POST | /api/v1/save_csv | [save csv](#save-csv) | Принимает csv файл и сохраняет информацию в БД |
+| POST | /api/v1/face_model/save_features | [save csv](#save-csv) | Принимает csv файл с фичами из видео |
   
 
 
 ## Paths
 
-### <span id="save-csv"></span> Принимает csv файл и сохраняет информацию в БД (*save csv*)
+### <span id="save-csv"></span> Принимает csv файл с фичами из видео (*save csv*)
 
 ```
-POST /api/v1/save_csv
+POST /api/v1/face_model/save_features
 ```
 
 #### Parameters

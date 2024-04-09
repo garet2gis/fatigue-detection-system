@@ -9,17 +9,17 @@ import (
 	"net/http"
 )
 
-// SaveCSV godoc
+// SaveVideoFeatures godoc
 //
-//	@Summary	Принимает csv файл и сохраняет информацию в БД
+//	@Summary	Принимает csv файл с фичами из видео
 //	@ID			save csv
 //	@Tags		Save CSV
 //	@Param		file	formData	file	true	"Загружаемый csv"
 //	@Success	204
 //	@Failure	400	{object}	app_errors.AppError
-//	@Router		/save_csv [post]
-func (c *CoreHandler) SaveCSV(w http.ResponseWriter, r *http.Request) error {
-	op := "handlers.CoreHandler.SaveCSV"
+//	@Router		/face_model/save_features [post]
+func (c *CoreHandler) SaveVideoFeatures(w http.ResponseWriter, r *http.Request) error {
+	op := "handlers.CoreHandler.SaveVideoFeatures"
 
 	l := logger.EntryWithRequestIDFromContext(r.Context())
 
@@ -27,17 +27,26 @@ func (c *CoreHandler) SaveCSV(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+
+	// TODO: get user_id from access_token
+	userID := "mock_user_id"
+
 	defer func(file multipart.File) {
 		err := file.Close()
 		if err != nil {
-			l.Error(fmt.Errorf("%s: %w", op, err).Error())
+			l.Error(fmt.Sprintf("%s: %v", op, err))
 		}
 	}(file)
 
 	txErr := c.transactor.WithinTransaction(r.Context(), func(txCtx context.Context) error {
-		err = c.dataRepository.CopyCSV(txCtx, file)
+		featuresCount, err := c.dataRepository.SaveFaceVideoFeatures(txCtx, file)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", op, err)
+		}
+
+		err = c.dataRepository.IncrementFeaturesCount(txCtx, userID, featuresCount)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
 		}
 
 		return nil
