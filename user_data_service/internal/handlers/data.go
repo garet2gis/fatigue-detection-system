@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"mime/multipart"
@@ -28,8 +29,15 @@ func (c *CoreHandler) SaveVideoFeatures(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	// TODO: get user_id from access_token
-	userID := "mock_user_id"
+	jwt := r.URL.Query().Get("access_token")
+	if jwt == "" {
+		return app_errors.ErrUnauthorized.WrapError(op, "empty access_token")
+	}
+
+	userID, err := c.tokenGenerator.GetUserIDFromToken(r.Context(), jwt)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 
 	defer func(file multipart.File) {
 		err := file.Close()
@@ -42,6 +50,18 @@ func (c *CoreHandler) SaveVideoFeatures(w http.ResponseWriter, r *http.Request) 
 		featuresCount, err := c.dataRepository.SaveFaceVideoFeatures(txCtx, file)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
+		}
+
+		_, err = c.dataRepository.GetFeaturesCount(txCtx, userID)
+		if err != nil {
+			if app_errors.IsNotFound(err) {
+				err = c.dataRepository.CreateFeaturesCount(txCtx, userID)
+				if err != nil {
+					return fmt.Errorf("%s: %w", op, err)
+				}
+			} else {
+				return fmt.Errorf("%s: %w", op, err)
+			}
 		}
 
 		err = c.dataRepository.IncrementFeaturesCount(txCtx, userID, featuresCount)

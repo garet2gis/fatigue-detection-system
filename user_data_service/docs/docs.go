@@ -16,6 +16,71 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Принимает данные пользователя для входа в систему",
+                "operationId": "login",
+                "parameters": [
+                    {
+                        "description": "Данные для логина",
+                        "name": "user_credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/fixtures.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/fixtures.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Принимает данные пользователя",
+                "operationId": "register",
+                "parameters": [
+                    {
+                        "description": "Данные для регистрации",
+                        "name": "user_data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/fixtures.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/face_model/save_features": {
             "post": {
                 "tags": [
@@ -75,6 +140,53 @@ const docTemplate = `{
                     "description": "Статус код ответа",
                     "type": "integer",
                     "example": 404
+                }
+            }
+        },
+        "fixtures.LoginRequest": {
+            "type": "object",
+            "required": [
+                "login",
+                "password"
+            ],
+            "properties": {
+                "login": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "fixtures.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "get_face_model_url": {
+                    "type": "string"
+                },
+                "upload_face_model_features_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "fixtures.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "login",
+                "password"
+            ],
+            "properties": {
+                "login": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "surname": {
+                    "type": "string"
                 }
             }
         }

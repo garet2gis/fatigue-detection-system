@@ -17,7 +17,7 @@ func upCreateUserTables(ctx context.Context, tx *sql.Tx) error {
 	    user_id CHAR(36) PRIMARY KEY,
 	    name VARCHAR(64) DEFAULT '',
 	    surname VARCHAR(64) DEFAULT '',
-	    password VARCHAR(64) NOT NULL,
+	    password_hash TEXT NOT NULL,
 	    login VARCHAR(64) NOT NULL
 	);`)
 

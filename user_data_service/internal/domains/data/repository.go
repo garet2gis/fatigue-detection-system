@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
@@ -31,6 +32,8 @@ func NewRepository(db postgresql.DB) *Repository {
 
 func (r *Repository) SaveFaceVideoFeatures(ctx context.Context, csvFile multipart.File) (uint64, error) {
 	op := "data.Repository.SaveFaceVideoFeatures"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
 	reader := csv.NewReader(csvFile)
 	header, _ := reader.Read()
 
@@ -81,6 +84,8 @@ func (r *Repository) SaveFaceVideoFeatures(ctx context.Context, csvFile multipar
 		}
 	}
 
+	l.With(zap.Uint64("count", featuresCount)).Info(fmt.Sprintf("%s: save face model features", op))
+
 	return featuresCount, nil
 }
 
@@ -88,11 +93,11 @@ func (r *Repository) IncrementFeaturesCount(ctx context.Context, userID string, 
 	op := "data.Repository.IncrementFeaturesCount"
 	l := logger.EntryWithRequestIDFromContext(ctx)
 
-	newValueString := fmt.Sprintf("face_video_features + %d", faceFeaturesCount)
+	newValueString := fmt.Sprintf("face_model_features + %d", faceFeaturesCount)
 
 	q, i, err := r.queryBuilder.
 		Update(FeaturesCountTable).
-		Set("face_video_features", sq.Expr(newValueString)).
+		Set("face_model_features", sq.Expr(newValueString)).
 		Where(sq.Eq{"user_id": userID}).
 		ToSql()
 	if err != nil {
@@ -106,8 +111,62 @@ func (r *Repository) IncrementFeaturesCount(ctx context.Context, userID string, 
 
 	l.With(
 		zap.String("user_id", userID),
-		zap.Uint64("face_video_features", faceFeaturesCount),
+		zap.Uint64("face_model_features", faceFeaturesCount),
 	).Info(fmt.Sprintf("%s: increase feature count", op))
 
 	return nil
+}
+
+func (r *Repository) CreateFeaturesCount(ctx context.Context, userID string) error {
+	op := "data.Repository.CreateFeaturesCount"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
+	setMap := sq.Eq{
+		"user_id": userID,
+	}
+
+	q, i, err := r.queryBuilder.
+		Insert(FeaturesCountTable).
+		SetMap(setMap).
+		ToSql()
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	_, err = r.db.Client(ctx).Exec(ctx, q, i...)
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	l.With(zap.String("user_id", userID)).Info(fmt.Sprintf("%s: create features count", op))
+
+	return nil
+}
+
+func (r *Repository) GetFeaturesCount(ctx context.Context, userID string) (*FeatureCount, error) {
+	op := "data.Repository.GetFeaturesCount"
+
+	q, i, err := r.queryBuilder.
+		Select(
+			"user_id",
+			"face_model_features",
+			"face_model_train_status",
+		).
+		From(FeaturesCountTable).
+		Where(sq.Eq{"user_id": userID}).
+		ToSql()
+	if err != nil {
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	var res FeatureCount
+	err = r.db.Client(ctx).Get(ctx, &res, q, i...)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, app_errors.ErrNotFound.WrapError(op, err.Error())
+		}
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	return &res, nil
 }

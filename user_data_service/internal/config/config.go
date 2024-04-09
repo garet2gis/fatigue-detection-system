@@ -39,11 +39,17 @@ type SwaggerConfig struct {
 	SwaggerURL      string `env:"SWAGGER_URL"`
 }
 
+type URLGeneratorConfig struct {
+	BaseURL   string `env:"BASE_URL" env-required:"true"`
+	JWTSecret string `env:"JWT_SECRET" env-required:"true"`
+}
+
 type Config struct {
 	DBConfig
 	HTTPConfig
 	LoggerConfig
 	SwaggerConfig
+	URLGeneratorConfig
 }
 
 var instance *Config

@@ -2,13 +2,15 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/tools"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -34,17 +36,17 @@ func (r *Repository) CreateUser(ctx context.Context, model User) (string, error)
 	}
 	userID := userUUID.String()
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(model.Password), bcrypt.DefaultCost)
+	model.PasswordHash, err = tools.Hash(model.PasswordHash)
 	if err != nil {
 		return "", app_errors.ErrInternalServerError.WrapError(op, err.Error())
 	}
 
 	setMap := sq.Eq{
-		"user_id":  userID,
-		"password": hashedPassword,
-		"login":    model.Login,
-		"name":     model.Name,
-		"surname":  model.Surname,
+		"user_id":       userID,
+		"password_hash": model.PasswordHash,
+		"login":         model.Login,
+		"name":          model.Name,
+		"surname":       model.Surname,
 	}
 
 	q, i, err := r.queryBuilder.
@@ -65,8 +67,8 @@ func (r *Repository) CreateUser(ctx context.Context, model User) (string, error)
 	return userID, nil
 }
 
-func (r *Repository) GetUser(ctx context.Context, userID string) (*User, error) {
-	op := "auth.Repository.GetUser"
+func (r *Repository) GetUserByLogin(ctx context.Context, login string) (*User, error) {
+	op := "auth.Repository.GetUserByLogin"
 
 	q, i, err := r.queryBuilder.
 		Select(
@@ -74,10 +76,10 @@ func (r *Repository) GetUser(ctx context.Context, userID string) (*User, error) 
 			"login",
 			"name",
 			"surname",
-			"password",
+			"password_hash",
 		).
 		From(UsersTable).
-		Where(sq.Eq{"user_id": userID}).
+		Where(sq.Eq{"login": login}).
 		ToSql()
 	if err != nil {
 		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
@@ -86,6 +88,9 @@ func (r *Repository) GetUser(ctx context.Context, userID string) (*User, error) 
 	var user User
 	err = r.db.Client(ctx).Get(ctx, &user, q, i...)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, app_errors.ErrNotFound.WrapError(op, err.Error())
+		}
 		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
 	}
 

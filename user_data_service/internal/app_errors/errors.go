@@ -42,9 +42,9 @@ var (
 		5,
 		http.StatusBadRequest)
 
-	ErrNoAuthorizationHeader = NewAppError(
-		"NoAuthorizationHeader",
-		"no authorization header",
+	ErrUnauthorized = NewAppError(
+		"ErrUnauthorized",
+		"wrong password or login",
 		6,
 		http.StatusUnauthorized)
 

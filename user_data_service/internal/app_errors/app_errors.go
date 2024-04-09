@@ -1,8 +1,10 @@
 package app_errors
 
 import (
+	"errors"
 	"fmt"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/api"
+	"net/http"
 )
 
 type AppError struct {
@@ -67,4 +69,18 @@ func (e AppError) ToCoreError() api.AppError {
 		Code:    e.Code,
 		Status:  e.Status,
 	}
+}
+
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		if appErr.Status == http.StatusNotFound {
+			return true
+		}
+	}
+	return false
 }

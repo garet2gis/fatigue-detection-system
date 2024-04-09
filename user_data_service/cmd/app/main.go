@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/config"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/auth"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/handlers"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/server"
+	"github.com/go-playground/validator/v10"
 
 	_ "github.com/garet2gis/fatigue-detection-system/user_data_service/docs"
 	_ "github.com/garet2gis/fatigue-detection-system/user_data_service/migrations"
@@ -27,9 +29,16 @@ func main() {
 	if err != nil {
 		l.Fatal(err.Error())
 	}
-	//validate := validator.New()
+	validate := validator.New()
 
-	coreHandler := handlers.NewCoreHandler(data.NewRepository(dbClient), dbClient, l)
+	coreHandler := handlers.NewCoreHandler(
+		data.NewRepository(dbClient),
+		auth.NewRepository(dbClient),
+		handlers.NewTokenHandler(cfg.JWTSecret),
+		cfg.BaseURL,
+		dbClient,
+		validate,
+		l)
 
 	app := server.NewServer(cfg.ToAppConfig(), coreHandler.Router(), l)
 
