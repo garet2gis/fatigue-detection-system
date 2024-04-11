@@ -21,9 +21,10 @@ import (
 
 type DataRepository interface {
 	SaveFaceVideoFeatures(ctx context.Context, file multipart.File) (uint64, error)
-	IncrementFeaturesCount(ctx context.Context, userID string, faceFeaturesCount uint64) error
-	CreateFeaturesCount(ctx context.Context, userID string) error
-	GetFeaturesCount(ctx context.Context, userID string) (*data.FeatureCount, error)
+
+	ChangeFeaturesCount(ctx context.Context, userID, modelType string, faceFeaturesCount int) error
+	CreateModel(ctx context.Context, userID, modelType string) error
+	GetModelByUserID(ctx context.Context, userID, modelType string) (*data.MLModel, error)
 }
 
 type AuthRepository interface {

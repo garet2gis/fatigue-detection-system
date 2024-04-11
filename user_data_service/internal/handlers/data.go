@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"mime/multipart"
@@ -52,10 +53,10 @@ func (c *CoreHandler) SaveVideoFeatures(w http.ResponseWriter, r *http.Request) 
 			return fmt.Errorf("%s: %w", op, err)
 		}
 
-		_, err = c.dataRepository.GetFeaturesCount(txCtx, userID)
+		_, err = c.dataRepository.GetModelByUserID(txCtx, userID, data.FaceModel)
 		if err != nil {
 			if app_errors.IsNotFound(err) {
-				err = c.dataRepository.CreateFeaturesCount(txCtx, userID)
+				err = c.dataRepository.CreateModel(txCtx, userID, data.FaceModel)
 				if err != nil {
 					return fmt.Errorf("%s: %w", op, err)
 				}
@@ -64,7 +65,7 @@ func (c *CoreHandler) SaveVideoFeatures(w http.ResponseWriter, r *http.Request) 
 			}
 		}
 
-		err = c.dataRepository.IncrementFeaturesCount(txCtx, userID, featuresCount)
+		err = c.dataRepository.ChangeFeaturesCount(txCtx, userID, data.FaceModel, int(featuresCount))
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}

@@ -1,7 +1,9 @@
 package data
 
-type FeatureCount struct {
-	UserID               string `db:"user_id"`
-	FaceModelFeatures    uint64 `db:"face_model_features"`
-	FaceModelTrainStatus string `db:"face_model_train_status"`
+type MLModel struct {
+	UserID           string  `db:"user_id"`
+	ModelFeatures    uint64  `db:"features_count"`
+	ModelTrainStatus string  `db:"train_status"`
+	ModelType        string  `db:"model_type"`
+	ModelURL         *string `db:"model_url"`
 }

@@ -17,8 +17,19 @@ import (
 )
 
 const (
-	FeaturesTable      = "video_features"
-	FeaturesCountTable = "features_count"
+	FeaturesTable = "video_features"
+	ModelsTable   = "models"
+)
+
+const (
+	StatusNotTrain       = "not_train"
+	StatusInTrainProcess = "in_train_process"
+	StatusInTuneProcess  = "in_tune_process"
+	StatusTrained        = "train"
+)
+
+const (
+	FaceModel = "face_model"
 )
 
 type Repository struct {
@@ -89,16 +100,22 @@ func (r *Repository) SaveFaceVideoFeatures(ctx context.Context, csvFile multipar
 	return featuresCount, nil
 }
 
-func (r *Repository) IncrementFeaturesCount(ctx context.Context, userID string, faceFeaturesCount uint64) error {
+func (r *Repository) ChangeFeaturesCount(ctx context.Context, userID, modelType string, faceFeaturesCount int) error {
 	op := "data.Repository.IncrementFeaturesCount"
 	l := logger.EntryWithRequestIDFromContext(ctx)
 
-	newValueString := fmt.Sprintf("face_model_features + %d", faceFeaturesCount)
+	var newValueString string
+	if faceFeaturesCount > 0 {
+		newValueString = fmt.Sprintf("face_model_features + %d", faceFeaturesCount)
+	} else {
+		newValueString = fmt.Sprintf("face_model_features - %d", -faceFeaturesCount)
+	}
 
 	q, i, err := r.queryBuilder.
-		Update(FeaturesCountTable).
-		Set("face_model_features", sq.Expr(newValueString)).
+		Update(ModelsTable).
+		Set("features_count", sq.Expr(newValueString)).
 		Where(sq.Eq{"user_id": userID}).
+		Where(sq.Eq{"model_type": modelType}).
 		ToSql()
 	if err != nil {
 		return app_errors.ErrSQLExec.WrapError(op, err.Error())
@@ -111,22 +128,50 @@ func (r *Repository) IncrementFeaturesCount(ctx context.Context, userID string, 
 
 	l.With(
 		zap.String("user_id", userID),
-		zap.Uint64("face_model_features", faceFeaturesCount),
+		zap.String("model_type", modelType),
+		zap.Int("face_model_features_delta", faceFeaturesCount),
 	).Info(fmt.Sprintf("%s: increase feature count", op))
 
 	return nil
 }
 
-func (r *Repository) CreateFeaturesCount(ctx context.Context, userID string) error {
-	op := "data.Repository.CreateFeaturesCount"
+func (r *Repository) SetModelURL(ctx context.Context, url, modelType, userID string) error {
+	op := "data.Repository.SetModelURL"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
+	qb := r.queryBuilder.
+		Update(ModelsTable).
+		Set("model_url", url).
+		Where(sq.Eq{"user_id": userID}, sq.Eq{"model_type": modelType})
+
+	q, i, err := qb.ToSql()
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	// выполняем запрос
+	_, err = r.db.Client(ctx).Exec(ctx, q, i...)
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	l.With(zap.String("model_url", url), zap.String("user_id", userID), zap.String("model_type", modelType)).
+		Info(fmt.Sprintf("%s: set new model_url to model", op))
+
+	return nil
+}
+
+func (r *Repository) CreateModel(ctx context.Context, userID, modelType string) error {
+	op := "data.Repository.CreateModel"
 	l := logger.EntryWithRequestIDFromContext(ctx)
 
 	setMap := sq.Eq{
-		"user_id": userID,
+		"user_id":    userID,
+		"model_type": modelType,
 	}
 
 	q, i, err := r.queryBuilder.
-		Insert(FeaturesCountTable).
+		Insert(ModelsTable).
 		SetMap(setMap).
 		ToSql()
 	if err != nil {
@@ -138,28 +183,35 @@ func (r *Repository) CreateFeaturesCount(ctx context.Context, userID string) err
 		return app_errors.ErrSQLExec.WrapError(op, err.Error())
 	}
 
-	l.With(zap.String("user_id", userID)).Info(fmt.Sprintf("%s: create features count", op))
+	l.With(
+		zap.String("user_id", userID),
+		zap.String("model_type", modelType),
+	).Info(fmt.Sprintf("%s: create model", op))
 
 	return nil
 }
 
-func (r *Repository) GetFeaturesCount(ctx context.Context, userID string) (*FeatureCount, error) {
-	op := "data.Repository.GetFeaturesCount"
+func (r *Repository) GetModelByUserID(ctx context.Context, userID, modelType string) (*MLModel, error) {
+	op := "data.Repository.GetModelByUserID"
+	l := logger.EntryWithRequestIDFromContext(ctx)
 
 	q, i, err := r.queryBuilder.
 		Select(
 			"user_id",
-			"face_model_features",
-			"face_model_train_status",
+			"features_count",
+			"train_status",
+			"model_url",
+			"model_type",
 		).
-		From(FeaturesCountTable).
+		From(ModelsTable).
 		Where(sq.Eq{"user_id": userID}).
+		Where(sq.Eq{"model_type": modelType}).
 		ToSql()
 	if err != nil {
 		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
 	}
 
-	var res FeatureCount
+	var res MLModel
 	err = r.db.Client(ctx).Get(ctx, &res, q, i...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -168,5 +220,104 @@ func (r *Repository) GetFeaturesCount(ctx context.Context, userID string) (*Feat
 		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
 	}
 
+	l.With(
+		zap.String("user_id", userID),
+		zap.String("model_type", modelType),
+	).Info(fmt.Sprintf("%s: get model by userID", op))
+
 	return &res, nil
+}
+
+func (r *Repository) ViewNotLearnedModels(ctx context.Context, modelType string, trainThreshold uint64) ([]MLModel, error) {
+	op := "data.Repository.ViewNotLearnedModels"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
+	q, i, err := r.queryBuilder.
+		Select(
+			"user_id",
+			"features_count",
+			"train_status",
+			"model_url",
+			"model_type",
+		).
+		From(ModelsTable).
+		Where(
+			sq.Eq{"face_model_train_status": StatusNotTrain},
+			sq.Eq{"model_type": modelType},
+			sq.GtOrEq{"face_model_features": trainThreshold},
+		).
+		ToSql()
+	if err != nil {
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	var res []MLModel
+	err = r.db.Client(ctx).Select(ctx, &res, q, i...)
+	if err != nil {
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	l.With(zap.Int("count", len(res))).Info(fmt.Sprintf("%s: find not learned models", op))
+
+	return res, nil
+}
+
+func (r *Repository) ViewNotFineTunedFaceModels(ctx context.Context, modelType string, tuneThreshold uint64) ([]MLModel, error) {
+	op := "data.Repository.ViewNotLearnedModels"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
+	q, i, err := r.queryBuilder.
+		Select(
+			"user_id",
+			"features_count",
+			"train_status",
+			"model_url",
+			"model_type",
+		).
+		From(ModelsTable).
+		Where(
+			sq.Eq{"face_model_train_status": StatusTrained},
+			sq.Eq{"model_type": modelType},
+			sq.GtOrEq{"face_model_features": tuneThreshold},
+		).
+		ToSql()
+	if err != nil {
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	var res []MLModel
+	err = r.db.Client(ctx).Select(ctx, &res, q, i...)
+	if err != nil {
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	l.With(zap.Int("count", len(res))).Info(fmt.Sprintf("%s: find models for fine tuning", op))
+
+	return res, nil
+}
+
+func (r *Repository) SetModelStatus(ctx context.Context, status, modelType string, userID string) error {
+	op := "data.Repository.SetModelStatus"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
+	qb := r.queryBuilder.
+		Update(ModelsTable).
+		Set("train_status", status).
+		Where(sq.Eq{"user_id": userID}, sq.Eq{"model_type": modelType})
+
+	q, i, err := qb.ToSql()
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	// выполняем запрос
+	_, err = r.db.Client(ctx).Exec(ctx, q, i...)
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	l.With(zap.String("status", status), zap.String("user_id", userID)).
+		Info(fmt.Sprintf("%s: set new status to model", op))
+
+	return nil
 }
