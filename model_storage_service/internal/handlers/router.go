@@ -6,7 +6,6 @@ import (
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/internal/app_errors"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/logger"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/postgresql"
 	"io"
 
 	"github.com/go-chi/chi/v5"
@@ -19,20 +18,27 @@ import (
 
 type ModelSaver interface {
 	SaveFile(ctx context.Context, fileName string, file io.Reader) error
+	GenerateS3DownloadLink(key string) (string, error)
+}
+
+type Producer interface {
+	Publish(queue string, message []byte) error
 }
 
 type CoreHandler struct {
-	modelSaver ModelSaver
-	transactor postgresql.Transactor
+	modelSaver  ModelSaver
+	producer    Producer
+	resultQueue string
 
 	logger *zap.Logger
 }
 
-func NewCoreHandler(modelSaver ModelSaver, transactor postgresql.Transactor, logger *zap.Logger) *CoreHandler {
+func NewCoreHandler(modelSaver ModelSaver, producer Producer, resultQueue string, logger *zap.Logger) *CoreHandler {
 	return &CoreHandler{
-		modelSaver: modelSaver,
-		transactor: transactor,
-		logger:     logger,
+		modelSaver:  modelSaver,
+		producer:    producer,
+		resultQueue: resultQueue,
+		logger:      logger,
 	}
 }
 

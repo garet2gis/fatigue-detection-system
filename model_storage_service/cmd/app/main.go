@@ -6,7 +6,7 @@ import (
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/internal/config"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/internal/handlers"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/logger"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/postgresql"
+	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/rabbitmq"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/s3_client"
 	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/server"
 )
@@ -21,7 +21,13 @@ func main() {
 
 	l := logger.NewLogger(cfg.ToLoggerConfig())
 
-	dbClient, err := postgresql.NewClient(context.Background(), cfg.ToDBConfig())
+	rabbit, err := rabbitmq.NewRabbitMQConnection(cfg.RabbitURL, cfg.RabbitPoolSize)
+	if err != nil {
+		l.Fatal(err.Error())
+	}
+	defer rabbit.Close()
+
+	err = rabbit.InitQueues([]string{cfg.ResultQueue})
 	if err != nil {
 		l.Fatal(err.Error())
 	}
@@ -31,12 +37,12 @@ func main() {
 		l.Fatal(err.Error())
 	}
 
-	coreHandler := handlers.NewCoreHandler(s3Client, dbClient, l)
+	coreHandler := handlers.NewCoreHandler(s3Client, rabbit, cfg.RabbitConfig.ResultQueue, l)
 
 	app := server.NewServer(cfg.ToAppConfig(), coreHandler.Router(), l)
 
 	app.SetShutdownCallback(func(_ context.Context) error {
-		dbClient.Close()
+		rabbit.Close()
 		return nil
 	})
 

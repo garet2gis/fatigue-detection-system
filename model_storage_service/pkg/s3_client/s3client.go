@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"io"
+	"net/url"
 )
 
 type ConfigS3 struct {
@@ -20,14 +21,16 @@ type ConfigS3 struct {
 
 	AccessKeyID     string
 	SecretAccessKey string
+	Endpoint        string
 }
 
 type S3Client struct {
 	s3Service  *s3.Client
+	configS3   ConfigS3
 	bucketName string
 }
 
-func (s S3Client) GetPureS3Client() *s3.Client {
+func (s *S3Client) GetPureS3Client() *s3.Client {
 	return s.s3Service
 }
 
@@ -56,6 +59,7 @@ func NewS3Client(ctx context.Context, cfg ConfigS3) (*S3Client, error) {
 
 	s3Client := s3.NewFromConfig(awsCfg)
 	return &S3Client{
+		configS3:   cfg,
 		s3Service:  s3Client,
 		bucketName: cfg.Bucket,
 	}, nil
@@ -156,4 +160,15 @@ func (s *S3Client) SaveFile(ctx context.Context, key string, file io.Reader) err
 	}
 
 	return nil
+}
+
+func (s *S3Client) GenerateS3DownloadLink(key string) (string, error) {
+	op := "s3_client.S3Client.GenerateS3DownloadLink"
+
+	result, err := url.JoinPath(s.configS3.Endpoint, s.configS3.Bucket, key)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	return result, nil
 }

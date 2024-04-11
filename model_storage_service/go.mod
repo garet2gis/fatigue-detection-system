@@ -13,6 +13,7 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/pressly/goose/v3 v3.19.2
+	github.com/streadway/amqp v1.1.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.8.1
 	go.uber.org/zap v1.27.0
