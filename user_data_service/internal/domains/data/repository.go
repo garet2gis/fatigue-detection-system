@@ -100,15 +100,15 @@ func (r *Repository) SaveFaceVideoFeatures(ctx context.Context, csvFile multipar
 	return featuresCount, nil
 }
 
-func (r *Repository) ChangeFeaturesCount(ctx context.Context, userID, modelType string, faceFeaturesCount int) error {
-	op := "data.Repository.IncrementFeaturesCount"
+func (r *Repository) ChangeFeaturesCount(ctx context.Context, userID, modelType string, featuresCount int) error {
+	op := "data.Repository.ChangeFeaturesCount"
 	l := logger.EntryWithRequestIDFromContext(ctx)
 
 	var newValueString string
-	if faceFeaturesCount > 0 {
-		newValueString = fmt.Sprintf("face_model_features + %d", faceFeaturesCount)
+	if featuresCount > 0 {
+		newValueString = fmt.Sprintf("features_count + %d", featuresCount)
 	} else {
-		newValueString = fmt.Sprintf("face_model_features - %d", -faceFeaturesCount)
+		newValueString = fmt.Sprintf("features_count - %d", -featuresCount)
 	}
 
 	q, i, err := r.queryBuilder.
@@ -129,7 +129,7 @@ func (r *Repository) ChangeFeaturesCount(ctx context.Context, userID, modelType 
 	l.With(
 		zap.String("user_id", userID),
 		zap.String("model_type", modelType),
-		zap.Int("face_model_features_delta", faceFeaturesCount),
+		zap.Int("face_model_features_delta", featuresCount),
 	).Info(fmt.Sprintf("%s: increase feature count", op))
 
 	return nil
