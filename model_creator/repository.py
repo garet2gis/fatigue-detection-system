@@ -15,11 +15,10 @@ class Repository:
         finally:
             connection.close()
 
-    def get_features_by_video_ids(self, ids):
+    def get_features_by_user_id(self, user_id):
         with self.connect() as connection:
-            ids = ['\'{}\''.format(id) for id in ids]
-            query = f"SELECT * FROM video_features WHERE video_id IN ({', '.join(ids)})"
-            records_df = pd.read_sql_query(query, connection)
+            query = "SELECT * FROM video_features WHERE user_id = %s"
+            records_df = pd.read_sql_query(query, connection, params=(user_id,))
             return records_df
 
     def get_all_features(self):

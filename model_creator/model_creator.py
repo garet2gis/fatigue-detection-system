@@ -8,7 +8,7 @@ import os
 import requests
 
 
-def create_xgb(data, url):
+def create_xgb(data, url, user_id, model_type, features_count):
     data = data.drop(columns=['video_id'])
     data = data.drop(columns=['frame_count'])
     data = data.drop(columns=['user_id'])
@@ -55,9 +55,9 @@ def create_xgb(data, url):
     logging.info("Cross-validation scores:", cv_scores)
     logging.info("Average accuracy:", cv_scores.mean())
 
-    file_path = './models/xgb.xgb'
+    file_path = './models/tmp.xgb'
     xgb.save_model(file_path)
-    send_file(file_path, url)
+    send_model(file_path, url, user_id, model_type, features_count)
     delete_file(file_path)
 
 
@@ -72,11 +72,17 @@ def delete_file(file_path):
         logging.error(f"Произошла ошибка при удалении файла: {str(e)}")
 
 
-def send_file(file_path, url):
+def send_model(file_path, url, user_id, model_type, features_count):
     try:
         with open(file_path, 'rb') as file:
+            data = {
+                'user_id': user_id,
+                'model_type': model_type,
+                'features_count': str(features_count)
+            }
+
             files = {'file': file}
-            response = requests.post(url, files=files)
+            response = requests.post(url, data=data, files=files)
             if str(response.status_code).startswith('2'):
                 logging.info(f"Файл успешно отправлен по HTTP: {file_path}")
             else:

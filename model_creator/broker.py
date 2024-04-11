@@ -25,13 +25,19 @@ class Broker:
 
     def callback(self, ch, method, properties, body):
         try:
-            ids = json.loads(body)
+            msg = json.loads(body)
 
-            df = self.repository.get_all_features()
+            user_id = msg['user_id']
+            model_type = msg['model_type']
 
-            logging.info("Records with ids {}: \n{}".format(ids, df))
+            df = self.repository.get_features_by_user_id(user_id)
 
-            create_xgb(df, self.model_storage_url)
+            features_count = len(df)
+
+            logging.info(f"Get {features_count} records with user_id: {user_id}")
+            create_xgb(df, self.model_storage_url, user_id, model_type, features_count)
+            logging.info(f"Create xgb model for user_id: {user_id}")
+
 
 
 
