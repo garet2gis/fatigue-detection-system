@@ -242,9 +242,9 @@ func (r *Repository) ViewNotLearnedModels(ctx context.Context, modelType string,
 		).
 		From(ModelsTable).
 		Where(
-			sq.Eq{"face_model_train_status": StatusNotTrain},
+			sq.Eq{"train_status": StatusNotTrain},
 			sq.Eq{"model_type": modelType},
-			sq.GtOrEq{"face_model_features": trainThreshold},
+			sq.GtOrEq{"features_count": trainThreshold},
 		).
 		ToSql()
 	if err != nil {
@@ -276,9 +276,9 @@ func (r *Repository) ViewNotFineTunedFaceModels(ctx context.Context, modelType s
 		).
 		From(ModelsTable).
 		Where(
-			sq.Eq{"face_model_train_status": StatusTrained},
+			sq.Eq{"train_status": StatusTrained},
 			sq.Eq{"model_type": modelType},
-			sq.GtOrEq{"face_model_features": tuneThreshold},
+			sq.GtOrEq{"features_count": tuneThreshold},
 		).
 		ToSql()
 	if err != nil {

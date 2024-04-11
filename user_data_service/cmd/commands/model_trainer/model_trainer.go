@@ -14,15 +14,7 @@ import (
 )
 
 func Action(_ *cli.Context) error {
-	cfg := config.GetConfig()
-
-	// db
-	// logger
-	// TODO: add to cfg
-	rabbitURL := "amqp://user:password@localhost:5672/"
-	poolSize := 10
-	cfgThresholds := map[string]workers.ModelTrainThreshold{data.FaceModel: {TrainThreshold: 8000, TuneThreshold: 2000}}
-	cron := "*/3 * * * * *"
+	cfg := config.GetConfigModelTrainer()
 
 	l := logger.NewLogger(cfg.ToLoggerConfig())
 
@@ -31,20 +23,29 @@ func Action(_ *cli.Context) error {
 		l.Fatal(err.Error())
 	}
 
-	rabbit, err := rabbitmq.NewRabbitMQConnection(rabbitURL, poolSize)
+	rabbit, err := rabbitmq.NewRabbitMQConnection(cfg.RabbitURL, cfg.RabbitPoolSize)
 	if err != nil {
 		l.Fatal(err.Error())
 	}
 	defer rabbit.Close()
 
-	scheduler := gocron.NewScheduler(time.UTC)
-	trainer := workers.NewModelTrainer(data.NewRepository(dbClient), dbClient, rabbit, scheduler, cfgThresholds, l)
+	var queues []string
+	for queue := range cfg.ModelTrainThresholds {
+		queues = append(queues, queue)
+	}
+
+	err = rabbit.InitQueues(queues)
 	if err != nil {
 		l.Fatal(err.Error())
 	}
 
-	// каждые 3 секунды
-	trainer.StartTrainModels(cron)
+	scheduler := gocron.NewScheduler(time.UTC)
+	trainer := workers.NewModelTrainer(data.NewRepository(dbClient), dbClient, rabbit, scheduler, cfg.ModelTrainThresholds, l)
+	if err != nil {
+		l.Fatal(err.Error())
+	}
+
+	trainer.StartTrainModels(cfg.CRON)
 
 	return nil
 }

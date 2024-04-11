@@ -19,7 +19,7 @@ import (
 
 func main() {
 	app := &cli.App{
-		Name: "server-embed",
+		Name: "data-service",
 		Commands: []*cli.Command{
 			{
 				Name:   "serve",

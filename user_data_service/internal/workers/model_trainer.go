@@ -21,8 +21,8 @@ type Producer interface {
 }
 
 type ModelTrainThreshold struct {
-	TrainThreshold uint64
-	TuneThreshold  uint64
+	TrainThreshold uint64 `json:"train_threshold"`
+	TuneThreshold  uint64 `json:"tune_threshold"`
 }
 
 type ModelTrainer struct {
@@ -111,6 +111,8 @@ func (m ModelTrainer) trainAndTuneModels() {
 					return fmt.Errorf("%s: %w", op, err)
 				}
 			}
+
+			m.logger.Info(fmt.Sprintf("%s: train models worker finished", op))
 		}
 
 		return nil

@@ -12,14 +12,7 @@ import (
 )
 
 func Action(_ *cli.Context) error {
-	cfg := config.GetConfig()
-
-	//db
-	//logger
-	// TODO: add to cfg
-	rabbitURL := "amqp://user:password@localhost:5672/"
-	poolSize := 1
-	resQueue := "result"
+	cfg := config.GetConfigModelUpdater()
 
 	l := logger.NewLogger(cfg.ToLoggerConfig())
 
@@ -28,13 +21,13 @@ func Action(_ *cli.Context) error {
 		l.Fatal(err.Error())
 	}
 
-	rabbit, err := rabbitmq.NewRabbitMQConnection(rabbitURL, poolSize)
+	rabbit, err := rabbitmq.NewRabbitMQConnection(cfg.RabbitURL, cfg.RabbitPoolSize)
 	if err != nil {
 		l.Fatal(err.Error())
 	}
 	defer rabbit.Close()
 
-	updater := workers.NewModelUpdater(data.NewRepository(dbClient), dbClient, rabbit, resQueue, l)
+	updater := workers.NewModelUpdater(data.NewRepository(dbClient), dbClient, rabbit, cfg.ResultQueue, l)
 	if err != nil {
 		l.Fatal(err.Error())
 	}

@@ -90,5 +90,7 @@ func (m ModelUpdater) StartModelUpdate() {
 		if txErr != nil {
 			m.logger.Error(txErr.Error())
 		}
+
+		m.logger.Info(fmt.Sprintf("%s: update model finished", op))
 	}
 }
