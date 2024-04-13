@@ -25,6 +25,7 @@ type DataRepository interface {
 	ChangeFeaturesCount(ctx context.Context, userID, modelType string, faceFeaturesCount int) error
 	CreateModel(ctx context.Context, userID, modelType string) error
 	GetModelByUserID(ctx context.Context, userID, modelType string) (*data.MLModel, error)
+	GetModelsByUserID(ctx context.Context, userID string) ([]data.MLModel, error)
 }
 
 type AuthRepository interface {

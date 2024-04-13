@@ -114,8 +114,7 @@ func (r *Repository) ChangeFeaturesCount(ctx context.Context, userID, modelType 
 	q, i, err := r.queryBuilder.
 		Update(ModelsTable).
 		Set("features_count", sq.Expr(newValueString)).
-		Where(sq.Eq{"user_id": userID}).
-		Where(sq.Eq{"model_type": modelType}).
+		Where(sq.Eq{"user_id": userID, "model_type": modelType}).
 		ToSql()
 	if err != nil {
 		return app_errors.ErrSQLExec.WrapError(op, err.Error())
@@ -130,7 +129,34 @@ func (r *Repository) ChangeFeaturesCount(ctx context.Context, userID, modelType 
 		zap.String("user_id", userID),
 		zap.String("model_type", modelType),
 		zap.Int("face_model_features_delta", featuresCount),
-	).Info(fmt.Sprintf("%s: increase feature count", op))
+	).Info(fmt.Sprintf("%s: change feature count", op))
+
+	return nil
+}
+
+func (r *Repository) SetFeaturesCountUsed(ctx context.Context, userID, modelType string, featuresCount int) error {
+	op := "data.Repository.SetFeaturesCountUsed"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
+	q, i, err := r.queryBuilder.
+		Update(ModelsTable).
+		Set("features_count_used", featuresCount).
+		Where(sq.Eq{"user_id": userID, "model_type": modelType}).
+		ToSql()
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	_, err = r.db.Client(ctx).Exec(ctx, q, i...)
+	if err != nil {
+		return app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	l.With(
+		zap.String("user_id", userID),
+		zap.String("model_type", modelType),
+		zap.Int("features_count_used", featuresCount),
+	).Info(fmt.Sprintf("%s: set features_count_used count", op))
 
 	return nil
 }
@@ -142,7 +168,7 @@ func (r *Repository) SetModelURL(ctx context.Context, url, modelType, userID str
 	qb := r.queryBuilder.
 		Update(ModelsTable).
 		Set("model_url", url).
-		Where(sq.Eq{"user_id": userID}, sq.Eq{"model_type": modelType})
+		Where(sq.Eq{"user_id": userID, "model_type": modelType})
 
 	q, i, err := qb.ToSql()
 	if err != nil {
@@ -204,8 +230,7 @@ func (r *Repository) GetModelByUserID(ctx context.Context, userID, modelType str
 			"model_type",
 		).
 		From(ModelsTable).
-		Where(sq.Eq{"user_id": userID}).
-		Where(sq.Eq{"model_type": modelType}).
+		Where(sq.Eq{"user_id": userID, "model_type": modelType}).
 		ToSql()
 	if err != nil {
 		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
@@ -228,6 +253,36 @@ func (r *Repository) GetModelByUserID(ctx context.Context, userID, modelType str
 	return &res, nil
 }
 
+func (r *Repository) GetModelsByUserID(ctx context.Context, userID string) ([]MLModel, error) {
+	op := "data.Repository.GetModelsByUserID"
+	l := logger.EntryWithRequestIDFromContext(ctx)
+
+	q, i, err := r.queryBuilder.
+		Select(
+			"user_id",
+			"features_count",
+			"train_status",
+			"model_url",
+			"model_type",
+		).
+		From(ModelsTable).
+		Where(sq.Eq{"user_id": userID}).
+		ToSql()
+	if err != nil {
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	var res []MLModel
+	err = r.db.Client(ctx).Select(ctx, &res, q, i...)
+	if err != nil {
+		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
+	}
+
+	l.With(zap.Int("count", len(res))).Info(fmt.Sprintf("%s: find models by user_id", op))
+
+	return res, nil
+}
+
 func (r *Repository) ViewNotLearnedModels(ctx context.Context, modelType string, trainThreshold uint64) ([]MLModel, error) {
 	op := "data.Repository.ViewNotLearnedModels"
 	l := logger.EntryWithRequestIDFromContext(ctx)
@@ -242,10 +297,9 @@ func (r *Repository) ViewNotLearnedModels(ctx context.Context, modelType string,
 		).
 		From(ModelsTable).
 		Where(
-			sq.Eq{"train_status": StatusNotTrain},
-			sq.Eq{"model_type": modelType},
-			sq.GtOrEq{"features_count": trainThreshold},
+			sq.Eq{"train_status": StatusNotTrain, "model_type": modelType},
 		).
+		Where(sq.GtOrEq{"features_count": trainThreshold}).
 		ToSql()
 	if err != nil {
 		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
@@ -276,10 +330,11 @@ func (r *Repository) ViewNotFineTunedFaceModels(ctx context.Context, modelType s
 		).
 		From(ModelsTable).
 		Where(
-			sq.Eq{"train_status": StatusTrained},
-			sq.Eq{"model_type": modelType},
-			sq.GtOrEq{"features_count": tuneThreshold},
+			sq.Eq{"train_status": StatusTrained,
+				"model_type": modelType,
+			},
 		).
+		Where(sq.GtOrEq{"features_count - features_count_used": tuneThreshold}).
 		ToSql()
 	if err != nil {
 		return nil, app_errors.ErrSQLExec.WrapError(op, err.Error())
@@ -303,7 +358,7 @@ func (r *Repository) SetModelStatus(ctx context.Context, status, modelType strin
 	qb := r.queryBuilder.
 		Update(ModelsTable).
 		Set("train_status", status).
-		Where(sq.Eq{"user_id": userID}, sq.Eq{"model_type": modelType})
+		Where(sq.Eq{"user_id": userID, "model_type": modelType})
 
 	q, i, err := qb.ToSql()
 	if err != nil {

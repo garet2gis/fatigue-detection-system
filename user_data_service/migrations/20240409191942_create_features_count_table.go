@@ -25,6 +25,7 @@ func upCreateFeaturesCountTable(ctx context.Context, tx *sql.Tx) error {
 	    user_id CHAR(36) NOT NULL,
 	    model_type model_type NOT NULL,
 	    features_count INT NOT NULL DEFAULT(0),
+	    features_count_used INT NOT NULL DEFAULT(0),
 	    train_status train_status NOT NULL DEFAULT('not_train'),
 	    model_url VARCHAR(128) DEFAULT NULL,
 	    

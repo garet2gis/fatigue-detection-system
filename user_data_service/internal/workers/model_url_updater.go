@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 )
 
 type UpdateModelRepository interface {
-	ChangeFeaturesCount(ctx context.Context, userID, modelType string, faceFeaturesCount int) error
+	SetFeaturesCountUsed(ctx context.Context, userID, modelType string, faceFeaturesCount int) error
 	SetModelURL(ctx context.Context, url, modelType, userID string) error
 	SetModelStatus(ctx context.Context, status string, modelType string, userID string) error
 }
@@ -55,6 +56,7 @@ type Message struct {
 
 func (m ModelUpdater) StartModelUpdate() {
 	op := "model_trainer.ModelUpdater.updateModels"
+	ctx := logger.ContextWithLogger(context.Background(), m.logger)
 
 	msgs, release, err := m.consumer.Consume(m.resultQueue)
 	if err != nil {
@@ -70,7 +72,7 @@ func (m ModelUpdater) StartModelUpdate() {
 			m.logger.Error(fmt.Sprintf("%s: %s", op, err.Error()))
 			continue
 		}
-		txErr := m.transactor.WithinTransaction(context.Background(), func(txCtx context.Context) error {
+		txErr := m.transactor.WithinTransaction(ctx, func(txCtx context.Context) error {
 			err := m.updateModelRepository.SetModelURL(txCtx, model.ModelURL, model.ModelType, model.UserID)
 			if err != nil {
 				return fmt.Errorf("%s: %w", op, err)
@@ -81,7 +83,7 @@ func (m ModelUpdater) StartModelUpdate() {
 				return fmt.Errorf("%s: %w", op, err)
 			}
 
-			err = m.updateModelRepository.ChangeFeaturesCount(txCtx, model.UserID, model.ModelType, -model.FeaturesCount)
+			err = m.updateModelRepository.SetFeaturesCountUsed(txCtx, model.UserID, model.ModelType, model.FeaturesCount)
 			if err != nil {
 				return fmt.Errorf("%s: %w", op, err)
 			}

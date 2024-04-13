@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
+	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
 	"github.com/go-co-op/gocron"
 	"go.uber.org/zap"
@@ -65,7 +66,10 @@ func (m ModelTrainer) StartTrainModels(cron string) {
 
 func (m ModelTrainer) trainAndTuneModels() {
 	op := "model_trainer.ModelTrainer.trainAndTuneModels"
-	txErr := m.transactor.WithinTransaction(context.Background(), func(txCtx context.Context) error {
+
+	ctx := logger.ContextWithLogger(context.Background(), m.logger)
+
+	txErr := m.transactor.WithinTransaction(ctx, func(txCtx context.Context) error {
 
 		for modelType, threshold := range m.thresholds {
 			models, err := m.viewModelRepository.ViewNotLearnedModels(txCtx, modelType, threshold.TrainThreshold)

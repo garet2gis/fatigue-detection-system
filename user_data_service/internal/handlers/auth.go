@@ -80,6 +80,11 @@ func (c *CoreHandler) Login(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
+	models, err := c.dataRepository.GetModelsByUserID(r.Context(), user.UserID)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
 	if err != nil {
 		return app_errors.ErrUnauthorized
@@ -90,7 +95,7 @@ func (c *CoreHandler) Login(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	res, err := fixtures.NewLoginResponse(c.BaseURL, tokenString)
+	res, err := fixtures.NewLoginResponse(c.BaseURL, tokenString, models)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

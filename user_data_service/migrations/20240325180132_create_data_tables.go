@@ -24,7 +24,7 @@ func upCreateDataTables(ctx context.Context, tx *sql.Tx) error {
 	    pupil DOUBLE PRECISION,
 	    
 	    label INT,
-	    user_id INT,
+	    user_id CHAR(36),
 	    PRIMARY KEY (video_id, frame_count)
 	);`)
 
