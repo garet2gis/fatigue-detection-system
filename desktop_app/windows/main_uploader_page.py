@@ -4,13 +4,9 @@ from PyQt5.QtGui import QFont, QPalette
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QColor
 import subprocess
-import time
-from vidgear.gears import CamGear, WriteGear
 import shutil
-from datetime import datetime
-import uuid
-
-from preprocess.preprocess_video_to_csv import upload_features_from_video
+from video_recorder.video_recorder import VideoRecorder
+from preprocess.feature_uploader import FeatureUploader
 
 
 def create_label(label):
@@ -20,17 +16,17 @@ def create_label(label):
     return label
 
 
-class MainWindow(QWidget):
-    def __init__(self, upload_csv_url):
+class MainDataUploaderWindow(QWidget):
+    def __init__(self, model_cfg):
         self.tired_path = os.path.join('videos', 'tired')
         self.awake_path = os.path.join('videos', 'awake')
-        self.upload_csv_url = upload_csv_url
+        self.model_cfg = model_cfg
         super().__init__()
         self.initUI()
 
     def initUI(self):
         self.setGeometry(300, 300, 300, 300)
-        self.setWindowTitle('Обучение модели (видеоданные)')
+        self.setWindowTitle('Сбор данных для модели (видеоданные)')
 
         # Цвет фона
         palette = self.palette()
@@ -72,7 +68,10 @@ class MainWindow(QWidget):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.ask_to_record_video)
-        self.timer.start(60000)  # Запуск таймера на каждый час (3600000 миллисекунд = 1 час)
+        self.timer.start(60000000)  # Запуск таймера на каждый час (3600000 миллисекунд = 1 час)
+        self.video_recorder = VideoRecorder()
+        self.feature_uploader = FeatureUploader()
+        self.video_recorder.finished.connect(self.ask_if_tired)
 
     def open_awake_folder(self):
         folder_path = os.path.abspath(self.awake_path)  # Замените на путь к вашей папке
@@ -84,60 +83,40 @@ class MainWindow(QWidget):
 
     def ask_to_record_video(self):
         reply = QMessageBox.question(self, 'Запись видео', 'Хотите ли вы начать запись видео?',
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
-            self.record_video()
-            self.update_count()
+            self.start_recording()
 
     def update_count(self):
         self.tired_files_count.setText(f"Количество видео, на которых вы устали: {count_files(self.tired_path)}")
         self.awake_files_count.setText(f"Количество видео, на которых вы бодры: {count_files(self.awake_path)}")
 
-    def record_video(self):
-        options = {
-            "CAP_PROP_FRAME_WIDTH": 244,
-            "CAP_PROP_FRAME_HEIGHT": 244,
-            "CAP_PROP_FPS": 244,
-        }
-
-        stream = CamGear(source=1, **options).start()
-
-        video_id = str(uuid.uuid4())
-        filename = f"{video_id}.mp4"
-
-        writer = WriteGear(output=filename)
-
-        start = time.perf_counter()
-        while True:
-            frame = stream.read()
-
-            if frame is None:
-                break
-
-            writer.write(frame)
-
-            stop = time.perf_counter()
-            # TODO const 15 seconds
-            if stop - start > 15:
-                break
-
-        stream.stop()
-        writer.close()
-
-        self.ask_if_tired(video_id, filename)
+    def start_recording(self):
+        if not self.video_recorder.isRunning():
+            self.video_recorder.start()
 
     def ask_if_tired(self, video_id, filename):
         reply = QMessageBox.question(self, 'Состояние', 'Вы устали?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        user_id = self.model_cfg['content']['user_id']
+        upload_features_url = self.model_cfg['content']['face_model']['upload_features_url']
+
         if reply == QMessageBox.Yes:
             tired_path = './videos/tired'
             shutil.move(filename, tired_path)
-            upload_features_from_video(video_id, os.path.join(tired_path, filename), True, self.upload_csv_url)
+            self.feature_uploader.setup(video_id, os.path.join(tired_path, filename), True, upload_features_url,
+                                        user_id)
 
         else:
             awake_path = './videos/awake'
             shutil.move(filename, awake_path)
-            upload_features_from_video(video_id, os.path.join(awake_path, filename), True, self.upload_csv_url)
+            self.feature_uploader.setup(video_id, os.path.join(awake_path, filename), False, upload_features_url,
+                                        user_id)
+
+        self.update_count()
+
+        if not self.feature_uploader.isRunning():
+            self.feature_uploader.start()
 
 
 def count_files(path):
