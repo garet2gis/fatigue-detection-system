@@ -6,6 +6,7 @@ import csv
 import os
 import logging
 from api.http import send_csv_file
+from PyQt5.QtCore import QThread, pyqtSignal
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -155,32 +156,93 @@ def get_features(video_path, pass_frame=2):
     return features
 
 
-def upload_features_from_video(video_id, filepath, is_tired, url):
-    user_id = 5
+class FeatureUploader(QThread):
+    finished = pyqtSignal()  # Сигнал о завершении записи
 
-    header = ['video_id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label', 'user_id']
+    def __init__(self):
+        super().__init__()
+        self.video_id = ""
+        self.filepath = ""
+        self.is_tired = False
+        self.url = ""
+        self.user_id = ""
 
-    csv_filename = f'{video_id}.csv'
-    with open(csv_filename, 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
+    def setup(self, video_id, filepath, is_tired, url, user_id):
+        super().__init__()
+        self.video_id = video_id
+        self.filepath = filepath
+        self.is_tired = is_tired
+        self.url = url
+        self.user_id = user_id
 
-        # write the header
-        writer.writerow(header)
+    def run(self):
+        header = ['video_id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label', 'user_id']
 
-        features = get_features(filepath)
-        for row in features:
-            # write the row
-            if is_tired:
-                writer.writerow([video_id, *row, 1, user_id])
-            else:
-                writer.writerow([video_id, *row, 0, user_id])
+        csv_filename = f'{self.video_id}.csv'
+        with open(csv_filename, 'w', encoding='UTF8') as f:
+            writer = csv.writer(f)
 
-        logging.info("Создание... " + filepath)
+            # write the header
+            writer.writerow(header)
 
-    send_csv_file(csv_filename, url)
+            features = get_features(self.filepath)
+            for row in features:
+                # write the row
+                if self.is_tired:
+                    writer.writerow([self.video_id, *row, 1, self.user_id])
+                else:
+                    writer.writerow([self.video_id, *row, 0, self.user_id])
 
-    # удаляем csv
-    delete_csv_file(csv_filename)
+            logging.info("Создание... " + self.filepath)
+
+        send_csv_file(csv_filename, self.url)
+        # удаляем csv
+        delete_csv_file(csv_filename)
+
+        self.finished.emit()
+
+
+class FeatureUploaderForFineTune(QThread):
+    finished = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+        self.is_tired = False
+        self.url = ""
+        self.user_id = ""
+        self.video_id = ""
+        self.features = []
+
+    def setup(self, features, video_id, is_tired, url, user_id):
+        super().__init__()
+        self.is_tired = is_tired
+        self.url = url
+        self.user_id = user_id
+        self.features = features
+        self.video_id = video_id
+
+    def run(self):
+        header = ['video_id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label', 'user_id']
+
+        csv_filename = f'{self.video_id}.csv'
+        with open(csv_filename, 'w', encoding='UTF8') as f:
+            writer = csv.writer(f)
+
+            # write the header
+            writer.writerow(header)
+
+            for row in self.features:
+                # write the row
+                if self.is_tired:
+                    writer.writerow([self.video_id, *row, 1, self.user_id])
+                else:
+                    writer.writerow([self.video_id, *row, 0, self.user_id])
+
+        send_csv_file(csv_filename, self.url)
+        # удаляем csv
+        # delete_csv_file(csv_filename)
+
+        self.finished.emit()
 
 
 def delete_csv_file(file_path):

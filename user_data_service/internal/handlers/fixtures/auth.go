@@ -24,6 +24,7 @@ type ActionModelURLs struct {
 }
 
 type LoginResponse struct {
+	UserID       string          `json:"user_id"`
 	FaceModelURL ActionModelURLs `json:"face_model"`
 }
 
@@ -31,9 +32,9 @@ type ModelURLs struct {
 	FaceModelURL string
 }
 
-func NewLoginResponse(baseURL, tokenString string, models []data.MLModel) (*LoginResponse, error) {
+func NewLoginResponse(userID, baseURL, tokenString string, models []data.MLModel) (*LoginResponse, error) {
 	op := "fixtures.NewLoginResponse"
-	joinedPathFaceModel, err := url.JoinPath(baseURL, "face_model/get")
+	joinedPathFaceModel, err := url.JoinPath(baseURL, "face_model/save_features")
 	if err != nil {
 		return nil, app_errors.ErrInternalServerError.WrapError(op, err.Error())
 	}
@@ -49,6 +50,7 @@ func NewLoginResponse(baseURL, tokenString string, models []data.MLModel) (*Logi
 	}
 
 	return &LoginResponse{
+		UserID: userID,
 		FaceModelURL: ActionModelURLs{
 			UploadFeaturesURL: joinedPathFaceModel + "?access_token=" + tokenString,
 			ModelURL:          faceModelURL,
