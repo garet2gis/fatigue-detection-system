@@ -95,7 +95,7 @@ func (c *CoreHandler) Login(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	res, err := fixtures.NewLoginResponse(c.BaseURL, tokenString, models)
+	res, err := fixtures.NewLoginResponse(user.UserID, c.BaseURL, tokenString, models)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

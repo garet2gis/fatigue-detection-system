@@ -69,7 +69,7 @@ func (r *Repository) SaveFaceVideoFeatures(ctx context.Context, csvFile multipar
 
 		row[1], _ = strconv.Atoi(record[1])
 		row[7], _ = strconv.Atoi(record[7])
-		row[8], _ = strconv.Atoi(record[8])
+		row[8] = record[8]
 
 		for i := 2; i < 7; i++ {
 			row[i], _ = strconv.ParseFloat(record[i], 64)
