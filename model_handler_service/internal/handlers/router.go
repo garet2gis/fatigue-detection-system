@@ -4,21 +4,33 @@ import (
 	"context"
 	"errors"
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/internal/app_errors"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/internal/domains/data"
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/logger"
-	"io"
-
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/postgresql"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"strings"
 )
 
+type FeatureRepository interface {
+	ChangeFeaturesCount(ctx context.Context, userID, modelType string, faceFeaturesCount int) error
+	CreateModel(ctx context.Context, userID, modelType string) error
+	GetModelByUserID(ctx context.Context, userID, modelType string) (*data.MLModel, error)
+	GetModelsByUserID(ctx context.Context, userID string) ([]data.MLModel, error)
+	SetFeaturesCountUsed(ctx context.Context, userID, modelType string, faceFeaturesCount int) error
+	SetModelS3Key(ctx context.Context, s3Key, modelType, userID string) error
+	SetModelStatus(ctx context.Context, status string, modelType string, userID string) error
+}
+
 type ModelSaver interface {
 	SaveFile(ctx context.Context, fileName string, file io.Reader) error
-	GenerateS3DownloadLink(key string) (string, error)
+	GetPresignURL(ctx context.Context, fileName string) (string, error)
 }
 
 type Producer interface {
@@ -26,16 +38,26 @@ type Producer interface {
 }
 
 type CoreHandler struct {
-	modelSaver  ModelSaver
-	resultQueue string
+	featureRepository FeatureRepository
+	modelSaver        ModelSaver
+	resultQueue       string
+	transactor        postgresql.Transactor
+	validator         *validator.Validate
 
 	logger *zap.Logger
 }
 
-func NewCoreHandler(modelSaver ModelSaver, logger *zap.Logger) *CoreHandler {
+func NewCoreHandler(modelSaver ModelSaver,
+	featureRepository FeatureRepository,
+	transactor postgresql.Transactor,
+	validator *validator.Validate,
+	logger *zap.Logger) *CoreHandler {
 	return &CoreHandler{
-		modelSaver: modelSaver,
-		logger:     logger,
+		featureRepository: featureRepository,
+		transactor:        transactor,
+		modelSaver:        modelSaver,
+		validator:         validator,
+		logger:            logger,
 	}
 }
 
@@ -80,7 +102,11 @@ func (c *CoreHandler) Router() chi.Router {
 	router.Use(InitRequestID)
 	router.Use(logger.WithLogger(c.logger))
 
-	router.Post("/api/v1/save_model", ErrorMiddleware(c.SaveModel))
+	router.Route("/api/v1", func(router chi.Router) {
+		router.Post("/save_model", ErrorMiddleware(c.SaveModel))
+		router.Post("/increase_features", ErrorMiddleware(c.IncreaseFeatures))
+		router.Post("/get_models", ErrorMiddleware(c.GetModels))
+	})
 
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		l := logger.EntryWithRequestIDFromContext(r.Context())

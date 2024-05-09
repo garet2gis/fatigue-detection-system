@@ -1,7 +1,115 @@
 basePath: /api/v1/
+definitions:
+  app_errors.AppError:
+    properties:
+      code:
+        description: Код ошибки
+        example: 26002
+        type: integer
+      message:
+        description: Сообщение ошибки
+        example: entity not found
+        type: string
+      name:
+        description: Наименование ошибки
+        example: NotFound
+        type: string
+      status:
+        description: Статус код ответа
+        example: 404
+        type: integer
+    required:
+    - code
+    - message
+    - name
+    - status
+    type: object
+  fixtures.GetModelsRequest:
+    properties:
+      string:
+        type: string
+    required:
+    - string
+    type: object
+  fixtures.IncreaseFeaturesRequest:
+    properties:
+      features_count:
+        type: integer
+      model_type:
+        type: string
+      user_id:
+        type: string
+    required:
+    - features_count
+    - model_type
+    - user_id
+    type: object
 info:
   contact: {}
   title: Model storage service
   version: "1.0"
-paths: {}
+paths:
+  /get_models:
+    post:
+      operationId: get models
+      parameters:
+      - description: ID пользователя
+        in: body
+        name: features_data
+        required: true
+        schema:
+          $ref: '#/definitions/fixtures.GetModelsRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_errors.AppError'
+      summary: Возвращает ссылки на модели по id пользователя
+      tags:
+      - Models
+  /increase_features:
+    post:
+      operationId: increase features
+      parameters:
+      - description: Данные о количестве фич
+        in: body
+        name: features_data
+        required: true
+        schema:
+          $ref: '#/definitions/fixtures.IncreaseFeaturesRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_errors.AppError'
+      summary: Принимает количество новых фич по моделям
+      tags:
+      - Features
+  /save_model:
+    post:
+      operationId: save model
+      parameters:
+      - description: Загружаемая ml-модель
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_errors.AppError'
+      summary: Принимает ml модель
+      tags:
+      - Models
 swagger: "2.0"

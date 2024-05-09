@@ -15,7 +15,168 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {}
+    "paths": {
+        "/get_models": {
+            "post": {
+                "tags": [
+                    "Models"
+                ],
+                "summary": "Возвращает ссылки на модели по id пользователя",
+                "operationId": "get models",
+                "parameters": [
+                    {
+                        "description": "ID пользователя",
+                        "name": "features_data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/fixtures.GetModelsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/increase_features": {
+            "post": {
+                "tags": [
+                    "Features"
+                ],
+                "summary": "Принимает количество новых фич по моделям",
+                "operationId": "increase features",
+                "parameters": [
+                    {
+                        "description": "Данные о количестве фич",
+                        "name": "features_data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/fixtures.IncreaseFeaturesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_errors.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/save_model": {
+            "post": {
+                "tags": [
+                    "Models"
+                ],
+                "summary": "Принимает ml модель",
+                "operationId": "save model",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Загружаемая ml-модель",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/app_errors.AppError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "app_errors.AppError": {
+            "type": "object",
+            "required": [
+                "code",
+                "message",
+                "name",
+                "status"
+            ],
+            "properties": {
+                "code": {
+                    "description": "Код ошибки",
+                    "type": "integer",
+                    "example": 26002
+                },
+                "message": {
+                    "description": "Сообщение ошибки",
+                    "type": "string",
+                    "example": "entity not found"
+                },
+                "name": {
+                    "description": "Наименование ошибки",
+                    "type": "string",
+                    "example": "NotFound"
+                },
+                "status": {
+                    "description": "Статус код ответа",
+                    "type": "integer",
+                    "example": 404
+                }
+            }
+        },
+        "fixtures.GetModelsRequest": {
+            "type": "object",
+            "required": [
+                "string"
+            ],
+            "properties": {
+                "string": {
+                    "type": "string"
+                }
+            }
+        },
+        "fixtures.IncreaseFeaturesRequest": {
+            "type": "object",
+            "required": [
+                "features_count",
+                "model_type",
+                "user_id"
+            ],
+            "properties": {
+                "features_count": {
+                    "type": "integer"
+                },
+                "model_type": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        }
+    }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
