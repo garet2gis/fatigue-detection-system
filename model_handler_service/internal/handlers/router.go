@@ -3,9 +3,9 @@ package handlers
 import (
 	"context"
 	"errors"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/internal/app_errors"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/api"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/logger"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/internal/app_errors"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/api"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/logger"
 	"io"
 
 	"github.com/go-chi/chi/v5"
@@ -27,18 +27,15 @@ type Producer interface {
 
 type CoreHandler struct {
 	modelSaver  ModelSaver
-	producer    Producer
 	resultQueue string
 
 	logger *zap.Logger
 }
 
-func NewCoreHandler(modelSaver ModelSaver, producer Producer, resultQueue string, logger *zap.Logger) *CoreHandler {
+func NewCoreHandler(modelSaver ModelSaver, logger *zap.Logger) *CoreHandler {
 	return &CoreHandler{
-		modelSaver:  modelSaver,
-		producer:    producer,
-		resultQueue: resultQueue,
-		logger:      logger,
+		modelSaver: modelSaver,
+		logger:     logger,
 	}
 }
 

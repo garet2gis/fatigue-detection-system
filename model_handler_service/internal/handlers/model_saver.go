@@ -1,15 +1,13 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/api"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/logger"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/api"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/logger"
 	"github.com/google/uuid"
 	"mime/multipart"
 	"net/http"
 	"path"
-	"strconv"
 )
 
 type Message struct {
@@ -45,9 +43,9 @@ func (c *CoreHandler) SaveModel(w http.ResponseWriter, r *http.Request) error {
 
 	userID := r.FormValue("user_id")
 	modelType := r.FormValue("model_type")
-	featuresCountString := r.FormValue("features_count")
+	//featuresCountString := r.FormValue("features_count")
 
-	featuresCount, err := strconv.Atoi(featuresCountString)
+	//featuresCount, err := strconv.Atoi(featuresCountString)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -63,27 +61,28 @@ func (c *CoreHandler) SaveModel(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	url, err := c.modelSaver.GenerateS3DownloadLink(filename)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	resultMessage := Message{
-		ModelType:     modelType,
-		UserID:        userID,
-		ModelURL:      url,
-		FeaturesCount: featuresCount,
-	}
-
-	msg, err := json.Marshal(resultMessage)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	err = c.producer.Publish(c.resultQueue, msg)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
+	// TODO: Save s3 key for user model
+	//url, err := c.modelSaver.GenerateS3DownloadLink(filename)
+	//if err != nil {
+	//	return fmt.Errorf("%s: %w", op, err)
+	//}
+	//
+	//resultMessage := Message{
+	//	ModelType:     modelType,
+	//	UserID:        userID,
+	//	ModelURL:      url,
+	//	FeaturesCount: featuresCount,
+	//}
+	//
+	//msg, err := json.Marshal(resultMessage)
+	//if err != nil {
+	//	return fmt.Errorf("%s: %w", op, err)
+	//}
+	//
+	//err = c.producer.Publish(c.resultQueue, msg)
+	//if err != nil {
+	//	return fmt.Errorf("%s: %w", op, err)
+	//}
 
 	api.WriteSuccess(r.Context(), w, struct{}{}, http.StatusNoContent, l)
 	return nil

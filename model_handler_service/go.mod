@@ -1,4 +1,4 @@
-module github.com/garet2gis/fatigue-detection-system/model_storage_service
+module github.com/garet2gis/fatigue-detection-system/model_handler_service
 
 go 1.21
 

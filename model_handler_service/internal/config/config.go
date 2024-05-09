@@ -1,10 +1,10 @@
 package config
 
 import (
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/logger"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/postgresql"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/s3_client"
-	"github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/server"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/logger"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/postgresql"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/s3_client"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/server"
 	"log"
 
 	"sync"
@@ -34,7 +34,6 @@ type S3Config struct {
 
 	AccessKeyID     string `env:"ACCESS_KEY_ID" env-required:"true"`
 	SecretAccessKey string `env:"SECRET_ACCESS_KEY" env-required:"true"`
-	Endpoint        string `env:"S3_ENDPOINT" env-required:"true"`
 }
 
 type LoggerConfig struct {
@@ -54,19 +53,12 @@ type SwaggerConfig struct {
 	SwaggerURL      string `env:"SWAGGER_URL"`
 }
 
-type RabbitConfig struct {
-	RabbitURL      string `env:"RABBIT_URL" env-required:"true"`
-	RabbitPoolSize int    `env:"SWAGGER_URL" env-default:"10"`
-	ResultQueue    string `env:"SWAGGER_URL" env-default:"result"`
-}
-
 type Config struct {
 	DBConfig
 	LoggerConfig
 	HTTPConfig
 	S3Config
 	SwaggerConfig
-	RabbitConfig
 }
 
 var instance *Config
@@ -128,6 +120,5 @@ func (c Config) ToS3Config() s3_client.ConfigS3 {
 		Bucket:            c.S3Config.BucketName,
 		AccessKeyID:       c.S3Config.AccessKeyID,
 		SecretAccessKey:   c.S3Config.SecretAccessKey,
-		Endpoint:          c.S3Config.Endpoint,
 	}
 }

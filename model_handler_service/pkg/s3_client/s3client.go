@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"io"
-	"net/url"
 )
 
 type ConfigS3 struct {
@@ -21,7 +20,6 @@ type ConfigS3 struct {
 
 	AccessKeyID     string
 	SecretAccessKey string
-	Endpoint        string
 }
 
 type S3Client struct {
@@ -163,12 +161,12 @@ func (s *S3Client) SaveFile(ctx context.Context, key string, file io.Reader) err
 }
 
 func (s *S3Client) GenerateS3DownloadLink(key string) (string, error) {
-	op := "s3_client.S3Client.GenerateS3DownloadLink"
+	//op := "s3_client.S3Client.GenerateS3DownloadLink"
+	//result, err := url.JoinPath(s.configS3.Endpoint, s.configS3.Bucket, key)
+	//if err != nil {
+	//	return "", fmt.Errorf("%s: %w", op, err)
+	//}
 
-	result, err := url.JoinPath(s.configS3.Endpoint, s.configS3.Bucket, key)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
-
-	return result, nil
+	// TODO
+	return "presigned url", nil
 }

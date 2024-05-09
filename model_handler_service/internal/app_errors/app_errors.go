@@ -1,6 +1,6 @@
 package app_errors
 
-import "github.com/garet2gis/fatigue-detection-system/model_storage_service/pkg/api"
+import "github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/api"
 
 type AppError struct {
 	// Наименование ошибки
