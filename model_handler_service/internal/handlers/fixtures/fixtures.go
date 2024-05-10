@@ -7,5 +7,5 @@ type IncreaseFeaturesRequest struct {
 }
 
 type GetModelsRequest struct {
-	UserID string `json:"string"  validate:"required"`
+	UserID string `json:"user_id"  validate:"required"`
 }

@@ -1,6 +1,6 @@
 {
   "face_model": {
-    "train_threshold": 1000,
-    "tune_threshold": 500
+    "train_threshold": 10000,
+    "tune_threshold": 1000
   }
 }
