@@ -1,8 +1,8 @@
 import time
 
 from preprocess.feature_uploader import (eye_feature, mouth_feature,
-                                         area_eye_feature, area_mouth_feature,
-                                         pupil_feature, mp_face_mesh, mp_drawing, SHOW_MESH, connections_drawing_spec)
+                                         perimeter, perimeter_feature,
+                                         head_angle, mp_face_mesh, mouth)
 import xgboost
 import numpy as np
 import cv2
@@ -37,13 +37,12 @@ class FaceModelLoader(QThread):
 
 class FaceXGBModel(QThread):
     predictionSignal = pyqtSignal(str)
+    frameSignal = pyqtSignal(object)
 
     def __init__(self, model, limited_array_size=16, buf_capacity=1000):
         super().__init__()
         self.limited_array_size = limited_array_size
         self.check_awake = LimitedSizeArray(limited_array_size)
-
-        self.loaded_scaler = joblib.load('./models/face_model/standard_scaler.joblib')
 
         self.face_model = model
         self.running = True
@@ -83,6 +82,8 @@ class FaceXGBModel(QThread):
                 if not success:
                     break
 
+                self.frameSignal.emit(image)
+
                 # To improve performance, optionally mark the image as not writeable to
                 # pass by reference.
                 image.flags.writeable = False
@@ -92,7 +93,11 @@ class FaceXGBModel(QThread):
                 # Draw the face mesh annotations on the image.
                 image.flags.writeable = True
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                img_h, img_w, img_c = image.shape
+
                 if results.multi_face_landmarks:
+                    x, y = head_angle(results.multi_face_landmarks, img_h, img_w)
+
                     landmarks_positions = []
                     # assume that only face is present in the image
                     for _, data_point in enumerate(results.multi_face_landmarks[0].landmark):
@@ -100,37 +105,37 @@ class FaceXGBModel(QThread):
                             [data_point.x, data_point.y, data_point.z])  # saving normalized landmark positions
 
                     landmarks_positions = np.array(landmarks_positions)
+
                     landmarks_positions[:, 0] *= image.shape[1]
                     landmarks_positions[:, 1] *= image.shape[0]
 
-                    eye = eye_feature(landmarks_positions)
-                    mouth = mouth_feature(landmarks_positions)
-                    area_eye = area_eye_feature(landmarks_positions)
-                    area_mouth = area_mouth_feature(landmarks_positions)
-                    pupil = pupil_feature(landmarks_positions)
+                    ear = eye_feature(landmarks_positions)
+                    mar = mouth_feature(landmarks_positions)
+                    perimeter_eye = perimeter_feature(landmarks_positions)
+                    perimeter_mouth = perimeter(landmarks_positions, mouth)
 
-                    self.last_features.enqueue([self.frame_count, eye, mouth, area_eye, area_mouth, pupil])
+                    self.last_features.enqueue([self.frame_count, ear, mar, perimeter_eye, perimeter_mouth, x, y])
                     self.frame_count += 1
 
                     if self.frame_count > self.buf_capacity:
                         self.frame_count = 0
 
-                    features = self.loaded_scaler.transform(pd.DataFrame({
-                        'eye': [eye],
-                        'mouth': [mouth],
-                        'area_eye': [area_eye],
-                        'area_mouth': [area_mouth],
-                        'pupil': [pupil]
-                    }))
+                    features = pd.DataFrame({
+                        'eye': [ear],
+                        'mouth': [mar],
+                        'perimeter_eye': [perimeter_eye],
+                        'perimeter_mouth': [perimeter_mouth],
+                        'x_angle': [x],
+                        'y_angle': [y],
+                    })
 
                     prediction = self.face_model.predict(xgboost.DMatrix(features))
 
                     self.check_awake.push(0 if prediction[0] < 0.5 else 1)
-                    label = 'Tired'
-                    if self.check_awake.count_zeros() >= self.limited_array_size / 2:
-                        label = 'Awake'
+                    label = 'Awake'
+                    if self.check_awake.count_zeros() == 0:
+                        label = 'Tired'
 
-                    print(label)
 
                     self.predictionSignal.emit(label)
 

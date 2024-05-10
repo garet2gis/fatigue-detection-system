@@ -75,23 +75,50 @@ def area_eye(landmarks, eye):
     return math.pi * ((distance(landmarks[eye[1][0]], landmarks[eye[3][1]]) * 0.5) ** 2)
 
 
-def area_mouth_feature(landmarks):
-    return math.pi * ((distance(landmarks[mouth[1][0]], landmarks[mouth[3][1]]) * 0.5) ** 2)
+def head_angle(landmarks, img_w, img_h):
+    face_3d = []
+    face_2d = []
 
+    for face_landmarks in landmarks:
+        for idx, lm in enumerate(face_landmarks.landmark):
+            if idx == 33 or idx == 263 or idx == 1 or idx == 61 or idx == 291 or idx == 199:
+                x, y = int(lm.x * img_w), int(lm.y * img_h)
 
-def area_eye_feature(landmarks):
-    return (area_eye(landmarks, left_eye) + area_eye(landmarks, right_eye)) / 2
+                # Get the 2D Coordinates
+                face_2d.append([x, y])
 
+                # Get the 3D Coordinates
+                face_3d.append([x, y, lm.z])
 
-def pupil_circularity(landmarks, eye):
-    return (4 * math.pi * area_eye(landmarks, eye)) / (perimeter(landmarks, eye) ** 2)
+        # Convert it to the NumPy array
+        face_2d = np.array(face_2d, dtype=np.float64)
 
+        # Convert it to the NumPy array
+        face_3d = np.array(face_3d, dtype=np.float64)
 
-def pupil_feature(landmarks):
-    return (pupil_circularity(landmarks, left_eye) +
-            pupil_circularity(landmarks, right_eye)) / 2
+        # The camera matrix
+        focal_length = 1 * img_w
 
+        cam_matrix = np.array([[focal_length, 0, img_h / 2],
+                               [0, focal_length, img_w / 2],
+                               [0, 0, 1]])
 
+        # The distortion parameters
+        dist_matrix = np.zeros((4, 1), dtype=np.float64)
+
+        # Solve PnP
+        success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
+
+        # Get rotational matrix
+        rmat, jac = cv2.Rodrigues(rot_vec)
+
+        # Get angles
+        angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
+
+        x = angles[0] * 360
+        y = angles[1] * 360
+
+        return x, y
 def get_features(video_path, pass_frame=2):
     cap = cv2.VideoCapture(video_path)
     features = []

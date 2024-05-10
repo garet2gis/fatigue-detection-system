@@ -42,10 +42,10 @@ class LoginWindow(QWidget):
         password = self.password.text()
         success, message, data = http.perform_login(self.login_url, username, password)
         if success:
-            if data['content']['face_model']['model_url'] == "":
-                self.main_window = MainDataUploaderWindow(data)
+            if data['content']['model_urls']['face_model'] == "":
+                self.main_window = MainDataUploaderWindow(data['content'])
             else:
-                self.main_window = PredictorWindow(data)
+                self.main_window = PredictorWindow(data['content'])
             self.main_window.show()
             self.close()
         QMessageBox.information(self, 'Информация', message)

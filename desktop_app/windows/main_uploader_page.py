@@ -98,8 +98,8 @@ class MainDataUploaderWindow(QWidget):
     def ask_if_tired(self, video_id, filename):
         reply = QMessageBox.question(self, 'Состояние', 'Вы устали?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        user_id = self.model_cfg['content']['user_id']
-        upload_features_url = self.model_cfg['content']['face_model']['upload_features_url']
+        user_id = self.model_cfg['user_id']
+        upload_features_url = self.model_cfg['upload_features']['face_model']
 
         if reply == QMessageBox.Yes:
             tired_path = './videos/tired'
