@@ -2,7 +2,6 @@ package fixtures
 
 import (
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
-	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
 	"net/url"
 )
 
@@ -18,42 +17,33 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
-type ActionModelURLs struct {
-	ModelURL          string `json:"model_url"`
-	UploadFeaturesURL string `json:"upload_features_url"`
+type UploadFeaturesURLs struct {
+	FaceModel string `json:"face_model"`
 }
 
 type LoginResponse struct {
-	UserID       string          `json:"user_id"`
-	FaceModelURL ActionModelURLs `json:"face_model"`
+	UserID string `json:"user_id"`
+
+	UploadFeaturesURLs UploadFeaturesURLs     `json:"upload_features"`
+	Models             map[string]interface{} `json:"model_urls"`
 }
 
 type ModelURLs struct {
 	FaceModelURL string
 }
 
-func NewLoginResponse(userID, baseURL, tokenString string, models []data.MLModel) (*LoginResponse, error) {
+func NewLoginResponse(userID, baseURL, tokenString string, models map[string]interface{}) (*LoginResponse, error) {
 	op := "fixtures.NewLoginResponse"
 	joinedPathFaceModel, err := url.JoinPath(baseURL, "face_model/save_features")
 	if err != nil {
 		return nil, app_errors.ErrInternalServerError.WrapError(op, err.Error())
 	}
 
-	var faceModelURL string
-	for _, val := range models {
-		switch val.ModelType {
-		case data.FaceModel:
-			if val.ModelURL != nil {
-				faceModelURL = *val.ModelURL
-			}
-		}
-	}
-
 	return &LoginResponse{
 		UserID: userID,
-		FaceModelURL: ActionModelURLs{
-			UploadFeaturesURL: joinedPathFaceModel + "?access_token=" + tokenString,
-			ModelURL:          faceModelURL,
+		UploadFeaturesURLs: UploadFeaturesURLs{
+			FaceModel: joinedPathFaceModel + "?access_token=" + tokenString,
 		},
+		Models: models,
 	}, nil
 }

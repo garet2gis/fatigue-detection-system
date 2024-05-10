@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/config"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/auth"
-	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/handlers"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
@@ -25,10 +24,11 @@ func Action(_ *cli.Context) error {
 	validate := validator.New()
 
 	coreHandler := handlers.NewCoreHandler(
-		data.NewRepository(dbClient),
 		auth.NewRepository(dbClient),
 		handlers.NewTokenHandler(cfg.JWTSecret),
 		cfg.BaseURL,
+		cfg.FeaturesHandler,
+		cfg.StorageHandler,
 		dbClient,
 		validate,
 		l)

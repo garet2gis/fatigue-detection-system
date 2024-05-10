@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/garet2gis/fatigue-detection-system/user_data_service/cmd/commands/model_trainer"
-	"github.com/garet2gis/fatigue-detection-system/user_data_service/cmd/commands/model_updater"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/cmd/commands/serve"
 	"github.com/urfave/cli/v2"
 	"log"
@@ -24,14 +22,6 @@ func main() {
 			{
 				Name:   "serve",
 				Action: serve.Action,
-			},
-			{
-				Name:   "model-updater",
-				Action: model_updater.Action,
-			},
-			{
-				Name:   "model-trainer",
-				Action: model_trainer.Action,
 			},
 		},
 	}
