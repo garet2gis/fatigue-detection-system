@@ -50,6 +50,8 @@ type Config struct {
 	LoggerConfig
 	SwaggerConfig
 	URLGeneratorConfig
+	StorageHandler  string `env:"STORAGE_HANDLER_URL" env-default:"http://0.0.0.0:3391/api/v1/get_models"`
+	FeaturesHandler string `env:"FEATURES_HANDLER_URL" env-default:"http://0.0.0.0:3392/api/v1/face_model/save_features"`
 }
 
 var instance *Config

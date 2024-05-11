@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"context"
+	"bytes"
 	"fmt"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
-	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
+	"io"
 	"mime/multipart"
 	"net/http"
 )
@@ -25,7 +25,7 @@ func (c *CoreHandler) SaveVideoFeatures(w http.ResponseWriter, r *http.Request) 
 
 	l := logger.EntryWithRequestIDFromContext(r.Context())
 
-	file, _, err := r.FormFile("file")
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		return err
 	}
@@ -47,36 +47,64 @@ func (c *CoreHandler) SaveVideoFeatures(w http.ResponseWriter, r *http.Request) 
 		}
 	}(file)
 
-	txErr := c.transactor.WithinTransaction(r.Context(), func(txCtx context.Context) error {
-		featuresCount, err := c.dataRepository.SaveFaceVideoFeatures(txCtx, file)
-		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
-		}
-
-		_, err = c.dataRepository.GetModelByUserID(txCtx, userID, data.FaceModel)
-		if err != nil {
-			if app_errors.IsNotFound(err) {
-				err = c.dataRepository.CreateModel(txCtx, userID, data.FaceModel)
-				if err != nil {
-					return fmt.Errorf("%s: %w", op, err)
-				}
-			} else {
-				return fmt.Errorf("%s: %w", op, err)
-			}
-		}
-
-		err = c.dataRepository.ChangeFeaturesCount(txCtx, userID, data.FaceModel, int(featuresCount))
-		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
-		}
-
-		return nil
-	})
-
-	if txErr != nil {
-		return txErr
+	err = c.sendFeatures(file, header.Filename, userID, "face_model")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	api.WriteSuccess(r.Context(), w, struct{}{}, http.StatusNoContent, l)
+	return nil
+}
+
+func (c *CoreHandler) sendFeatures(file multipart.File, fileName, userID, modelType string) error {
+	op := "handlers.CoreHandler.sendFeatures"
+	var requestBody bytes.Buffer
+
+	writer := multipart.NewWriter(&requestBody)
+
+	part, err := writer.CreateFormFile("file", fileName)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = writer.WriteField("user_id", userID)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = writer.WriteField("model_type", modelType)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	// Закрываем writer, чтобы записать завершающую границу
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	req, err := http.NewRequest("POST", c.FeaturesURL, &requestBody)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Отправляем запрос
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("%s: error from video_features service", op)
+	}
+
 	return nil
 }

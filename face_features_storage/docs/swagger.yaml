@@ -1,0 +1,124 @@
+basePath: /api/v1/
+definitions:
+  app_errors.AppError:
+    properties:
+      code:
+        description: Код ошибки
+        example: 26002
+        type: integer
+      message:
+        description: Сообщение ошибки
+        example: entity not found
+        type: string
+      name:
+        description: Наименование ошибки
+        example: NotFound
+        type: string
+      status:
+        description: Статус код ответа
+        example: 404
+        type: integer
+    required:
+    - code
+    - message
+    - name
+    - status
+    type: object
+  fixtures.LoginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  fixtures.LoginResponse:
+    properties:
+      get_face_model_url:
+        type: string
+      upload_face_model_features_url:
+        type: string
+    type: object
+  fixtures.RegisterRequest:
+    properties:
+      login:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      surname:
+        type: string
+    required:
+    - login
+    - password
+    type: object
+info:
+  contact: {}
+  title: User data service API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      parameters:
+      - description: Данные для логина
+        in: body
+        name: user_credentials
+        required: true
+        schema:
+          $ref: '#/definitions/fixtures.LoginRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/fixtures.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_errors.AppError'
+      summary: Принимает данные пользователя для входа в систему
+      tags:
+      - auth
+  /auth/register:
+    post:
+      operationId: register
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: user_data
+        required: true
+        schema:
+          $ref: '#/definitions/fixtures.RegisterRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_errors.AppError'
+      summary: Принимает данные пользователя
+      tags:
+      - auth
+  /face_model/save_features:
+    post:
+      operationId: save csv
+      parameters:
+      - description: Загружаемый csv
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/app_errors.AppError'
+      summary: Принимает csv файл с фичами из видео
+      tags:
+      - Save CSV
+swagger: "2.0"

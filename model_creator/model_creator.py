@@ -16,9 +16,6 @@ def create_xgb(data, url, user_id, model_type, features_count):
     df_num = data.select_dtypes(include=[np.number])
     df_cat = data.select_dtypes(include=[object])
     num_cols = df_num.columns.values[:-1]
-    cat_cols = df_cat.columns.values
-
-    data.dropna(inplace=True, axis=0)
 
     for col in num_cols:
         Q1, Q3 = data.loc[:, col].quantile([0.25, 0.75]).values
@@ -34,11 +31,7 @@ def create_xgb(data, url, user_id, model_type, features_count):
 
     data.dropna(inplace=True, axis=0)
 
-    scaler = StandardScaler()
-    data_norm = scaler.fit_transform(data[num_cols])
-    df = pd.DataFrame(data=data_norm, columns=num_cols)
-    df[cat_cols] = data[cat_cols].values
-    df = pd.get_dummies(df, columns=cat_cols)
+    df = data[num_cols]
 
     X = df
     Y = data["label"]

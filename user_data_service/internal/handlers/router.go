@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/app_errors"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/auth"
-	"github.com/garet2gis/fatigue-detection-system/user_data_service/internal/domains/data"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/api"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/user_data_service/pkg/postgresql"
@@ -14,19 +13,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"mime/multipart"
 	"net/http"
 	"strings"
 )
-
-type DataRepository interface {
-	SaveFaceVideoFeatures(ctx context.Context, file multipart.File) (uint64, error)
-
-	ChangeFeaturesCount(ctx context.Context, userID, modelType string, faceFeaturesCount int) error
-	CreateModel(ctx context.Context, userID, modelType string) error
-	GetModelByUserID(ctx context.Context, userID, modelType string) (*data.MLModel, error)
-	GetModelsByUserID(ctx context.Context, userID string) ([]data.MLModel, error)
-}
 
 type AuthRepository interface {
 	CreateUser(ctx context.Context, model auth.User) (string, error)
@@ -39,32 +28,35 @@ type TokenGenerator interface {
 }
 
 type CoreHandler struct {
-	dataRepository DataRepository
 	authRepository AuthRepository
 	tokenGenerator TokenGenerator
 	transactor     postgresql.Transactor
 	validator      *validator.Validate
 
-	BaseURL string
-	logger  *zap.Logger
+	BaseURL     string
+	StorageURL  string
+	FeaturesURL string
+	logger      *zap.Logger
 }
 
 func NewCoreHandler(
-	dataRepository DataRepository,
 	authRepository AuthRepository,
 	tokenGenerator TokenGenerator,
 	BaseURL string,
+	FeaturesURL string,
+	StorageURL string,
 	transactor postgresql.Transactor,
 	validator *validator.Validate,
 	logger *zap.Logger,
 ) *CoreHandler {
 	return &CoreHandler{
-		validator:      validator,
-		tokenGenerator: tokenGenerator,
-		BaseURL:        BaseURL,
-		dataRepository: dataRepository,
 		authRepository: authRepository,
+		tokenGenerator: tokenGenerator,
 		transactor:     transactor,
+		validator:      validator,
+		BaseURL:        BaseURL,
+		StorageURL:     StorageURL,
+		FeaturesURL:    FeaturesURL,
 		logger:         logger,
 	}
 }

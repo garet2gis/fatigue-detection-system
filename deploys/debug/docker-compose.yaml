@@ -1,14 +1,32 @@
 version: "3.5"
 
 services:
-  postgres:
+  model-handler-ps:
     image: postgres:15.2
     environment:
-      POSTGRES_DB: $DB_NAME
-      POSTGRES_USER: $DB_USERNAME
-      POSTGRES_PASSWORD: $DB_PASSWORD
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER:  'debug'
+      POSTGRES_PASSWORD:  'debug'
     ports:
-      - $EXPOSE_DB_PORT:$DB_PORT
+      - '5436:5432'
+
+  features-storage-ps:
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER: 'debug'
+      POSTGRES_PASSWORD: 'debug'
+    ports:
+      - '5437:5432'
+
+  user-data-ps:
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER: 'debug'
+      POSTGRES_PASSWORD: 'debug'
+    ports:
+      - '5438:5432'
 
   minio:
     image: minio/minio
