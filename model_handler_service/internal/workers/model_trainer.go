@@ -9,6 +9,7 @@ import (
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/postgresql"
 	"github.com/go-co-op/gocron"
 	"go.uber.org/zap"
+	"strconv"
 )
 
 type ViewModelRepository interface {
@@ -105,7 +106,7 @@ func (m ModelTrainer) trainAndTuneModels() {
 					return fmt.Errorf("%s: %w", op, err)
 				}
 
-				msg, err := json.Marshal(map[string]string{"user_id": model.UserID, "model_type": modelType})
+				msg, err := json.Marshal(map[string]string{"user_id": model.UserID, "model_type": modelType, "model_features": strconv.FormatUint(model.ModelFeatures, 10)})
 				if err != nil {
 					return fmt.Errorf("%s: %w", op, err)
 				}

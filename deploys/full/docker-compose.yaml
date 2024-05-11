@@ -1,0 +1,122 @@
+version: "3.5"
+
+services:
+  user-data-service:
+    container_name: user-data-service
+    build:
+      context: ../../user_data_service
+    env_file:
+      - .env.user_data_service
+    command: [ "serve" ]
+    ports:
+      - '3390:3390'
+    depends_on:
+      - user-data-ps
+    restart: always
+
+  user-data-ps:
+    container_name: user-data-ps
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER: 'debug'
+      POSTGRES_PASSWORD: 'debug'
+    ports:
+      - '5438:5432'
+
+  face-features-storage:
+    container_name: face-features-storage
+    build:
+      context: ../../face_features_storage
+    env_file:
+      - .env.face_features_storage
+    command: [ "serve" ]
+    ports:
+      - '3392:3392'
+    depends_on:
+      - features-storage-ps
+    restart: always
+
+  model-creator:
+    container_name: model-creator
+    build:
+      context: ../../model_creator
+    env_file:
+      - .env.model_creator
+    depends_on:
+      - features-storage-ps
+      - rabbitmq
+    restart: always
+
+  features-storage-ps:
+    container_name: features-storage-ps
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER: 'debug'
+      POSTGRES_PASSWORD: 'debug'
+    ports:
+      - '5437:5432'
+
+  model-handler-service:
+    container_name: model-handler-service
+    build:
+      context: ../../model_handler_service
+    env_file:
+      - .env.model-handler-service
+    command: [ "serve" ]
+    ports:
+      - '3391:3391'
+    depends_on:
+      - model-handler-ps
+      - minio
+    restart: always
+
+  worker-model-trainer:
+    container_name: worker-model-trainer
+    build:
+      context: ../../model_handler_service
+    env_file:
+      - .env.model-handler-service
+    command: [ "model-trainer" ]
+    depends_on:
+      - model-handler-ps
+      - rabbitmq
+    restart: always
+
+  model-handler-ps:
+    container_name: model-handler-ps
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER:  'debug'
+      POSTGRES_PASSWORD:  'debug'
+    ports:
+      - '5436:5432'
+
+  minio:
+    container_name: minio
+    image: minio/minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: $MINIO_ROOT_USER
+      MINIO_ROOT_PASSWORD: $MINIO_ROOT_PASSWORD
+    volumes:
+      - 'minio_data:/data'
+    command: server --console-address ":9001" /data
+
+  rabbitmq:
+    container_name: rabbitmq-convert-service
+    image: rabbitmq:3.10.7-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  minio_data:
+    driver: local

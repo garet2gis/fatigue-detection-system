@@ -24,8 +24,9 @@ import (
 //	@Success	204
 //	@Failure	400	{object}	app_errors.AppError
 //	@Router		/auth/register [post]
-func (c *CoreHandler) Register(_ http.ResponseWriter, r *http.Request) error {
+func (c *CoreHandler) Register(w http.ResponseWriter, r *http.Request) error {
 	op := "handlers.CoreHandler.Register"
+	l := logger.EntryWithRequestIDFromContext(r.Context())
 
 	var req fixtures.RegisterRequest
 
@@ -48,6 +49,8 @@ func (c *CoreHandler) Register(_ http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
+
+	api.WriteSuccess(r.Context(), w, struct{}{}, http.StatusNoContent, l)
 
 	return nil
 }

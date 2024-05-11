@@ -155,7 +155,11 @@ def get_features(video_path, pass_frame=2):
             # Draw the face mesh annotations on the image.
             image.flags.writeable = True
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            img_h, img_w, img_c = image.shape
+
             if results.multi_face_landmarks:
+                x, y = head_angle(results.multi_face_landmarks, img_h, img_w)
+
                 landmarks_positions = []
                 # assume that only face is present in the image
                 for _, data_point in enumerate(results.multi_face_landmarks[0].landmark):
@@ -163,16 +167,16 @@ def get_features(video_path, pass_frame=2):
                         [data_point.x, data_point.y, data_point.z])  # saving normalized landmark positions
 
                 landmarks_positions = np.array(landmarks_positions)
+
                 landmarks_positions[:, 0] *= image.shape[1]
                 landmarks_positions[:, 1] *= image.shape[0]
 
-                eye = eye_feature(landmarks_positions)
-                mouth = mouth_feature(landmarks_positions)
-                area_eye = area_eye_feature(landmarks_positions)
-                area_mouth = area_mouth_feature(landmarks_positions)
-                pupil = pupil_feature(landmarks_positions)
+                ear = eye_feature(landmarks_positions)
+                mar = mouth_feature(landmarks_positions)
+                perimeter_eye = perimeter_feature(landmarks_positions)
+                perimeter_mouth = perimeter(landmarks_positions, mouth)
 
-                features.append([frame_count, eye, mouth, area_eye, area_mouth, pupil])
+                features.append([frame_count, ear, mar, perimeter_eye, perimeter_mouth, x, y])
                 frame_count += 1
 
             if cv2.waitKey(5) & 0xFF == 27:
@@ -203,7 +207,16 @@ class FeatureUploader(QThread):
         self.user_id = user_id
 
     def run(self):
-        header = ['video_id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label', 'user_id']
+        header = ['video_id',
+                  'frame_count',
+                  'eye',
+                  'mouth',
+                  'perimeter_eye',
+                  'perimeter_mouth',
+                  'x_angle',
+                  'y_angle',
+                  'label',
+                  'user_id']
 
         csv_filename = f'{self.video_id}.csv'
         with open(csv_filename, 'w', encoding='UTF8') as f:
@@ -224,7 +237,7 @@ class FeatureUploader(QThread):
 
         send_csv_file(csv_filename, self.url)
         # удаляем csv
-        delete_csv_file(csv_filename)
+        # delete_csv_file(csv_filename)
 
         self.finished.emit()
 
@@ -249,7 +262,16 @@ class FeatureUploaderForFineTune(QThread):
         self.video_id = video_id
 
     def run(self):
-        header = ['video_id', 'frame_count', 'eye', 'mouth', 'area_eye', 'area_mouth', 'pupil', 'label', 'user_id']
+        header = ['video_id',
+                  'frame_count',
+                  'eye',
+                  'mouth',
+                  'perimeter_eye',
+                  'perimeter_mouth',
+                  'x_angle',
+                  'y_angle',
+                  'label',
+                  'user_id']
 
         csv_filename = f'{self.video_id}.csv'
         with open(csv_filename, 'w', encoding='UTF8') as f:

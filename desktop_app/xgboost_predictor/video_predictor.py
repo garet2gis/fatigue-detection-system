@@ -132,9 +132,9 @@ class FaceXGBModel(QThread):
                     prediction = self.face_model.predict(xgboost.DMatrix(features))
 
                     self.check_awake.push(0 if prediction[0] < 0.5 else 1)
-                    label = 'Awake'
+                    label = 'Текущее состояние: не уставшее'
                     if self.check_awake.count_zeros() == 0:
-                        label = 'Tired'
+                        label = 'Текущее состояние: уставшее'
 
 
                     self.predictionSignal.emit(label)

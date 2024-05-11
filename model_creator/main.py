@@ -22,7 +22,8 @@ if __name__ == '__main__':
     engine_str = f'postgresql://{POSTGRESQL_USER}:{POSTGRESQL_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DBNAME}'
     repository = Repository(engine_str)
 
-    consumer = Broker(model_storage_url=MODEL_STORAGE_URL, queue_name=RABBITMQ_QUEUE, repository=repository)
+    consumer = Broker(model_storage_url=MODEL_STORAGE_URL, queue_name=RABBITMQ_QUEUE, repository=repository,
+                      rabbitmq_host=RABBITMQ_HOST)
 
     consumer.connect()
     consumer.start_consuming()

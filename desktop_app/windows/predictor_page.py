@@ -16,7 +16,7 @@ class PredictorWindow(QWidget):
         self.label.resize(180, 60)
         self.label.move(10, 20)
 
-        self.init_upload = QPushButton('Отправить фичи', self)
+        self.init_upload = QPushButton('Отправить новые признаки', self)
         self.init_upload.clicked.connect(self.ask_to_record_video)
 
         self.layout = QVBoxLayout()
@@ -48,7 +48,7 @@ class PredictorWindow(QWidget):
             self.label.setText('Failed to load model.')
 
     def ask_to_record_video(self):
-        reply = QMessageBox.question(self, 'Отправить фичи', 'Вы на самом деле устали?',
+        reply = QMessageBox.question(self, 'Отправить новые признаки', 'Вы на самом деле устали?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
 
         if reply == QMessageBox.Yes:
