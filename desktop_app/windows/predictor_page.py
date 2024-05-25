@@ -4,6 +4,7 @@ from preprocess.feature_uploader import FeatureUploaderForFineTune
 import cv2
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
+import uuid
 
 
 class PredictorWindow(QWidget):
@@ -62,7 +63,8 @@ class PredictorWindow(QWidget):
     def upload_features(self, is_tired):
         self.video_processor.set_pause()
         features = self.video_processor.get_last_features()
-        self.feature_uploader.setup(features, "vid_id", is_tired, self.upload_features_url, self.user_id)
+        video_id = str(uuid.uuid4())
+        self.feature_uploader.setup(features, video_id, is_tired, self.upload_features_url, self.user_id)
         self.feature_uploader.start()
 
     def update_prediction(self, prediction):
