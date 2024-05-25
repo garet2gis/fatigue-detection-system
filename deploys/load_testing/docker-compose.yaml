@@ -1,0 +1,71 @@
+version: "3.5"
+
+services:
+  user-data-service:
+    container_name: user-data-service
+    build:
+      context: ../../user_data_service
+    env_file:
+      - .env.user_data_service
+    command: [ "serve" ]
+    ports:
+      - '3390:3390'
+    depends_on:
+      - user-data-ps
+    restart: always
+
+  user-data-ps:
+    container_name: user-data-ps
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER: 'debug'
+      POSTGRES_PASSWORD: 'debug'
+    ports:
+      - '5438:5432'
+
+  face-features-storage:
+    container_name: face-features-storage
+    build:
+      context: ../../face_features_storage
+    env_file:
+      - .env.face_features_storage
+    command: [ "serve" ]
+    ports:
+      - '3392:3392'
+    depends_on:
+      - features-storage-ps
+    restart: always
+
+  features-storage-ps:
+    container_name: features-storage-ps
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER: 'debug'
+      POSTGRES_PASSWORD: 'debug'
+    ports:
+      - '5437:5432'
+
+  model-handler-service:
+    container_name: model-handler-service
+    build:
+      context: ../../model_handler_service
+    env_file:
+      - .env.model-handler-service
+    command: [ "serve" ]
+    ports:
+      - '3391:3391'
+    depends_on:
+      - model-handler-ps
+    restart: always
+
+  model-handler-ps:
+    container_name: model-handler-ps
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'debug'
+      POSTGRES_USER:  'debug'
+      POSTGRES_PASSWORD:  'debug'
+    ports:
+      - '5436:5432'
