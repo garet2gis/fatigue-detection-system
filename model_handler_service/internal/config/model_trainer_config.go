@@ -6,6 +6,7 @@ import (
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/internal/workers"
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/postgresql"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/s3_client"
 	"github.com/ilyakaznacheev/cleanenv"
 	"log"
 	"os"
@@ -15,6 +16,7 @@ import (
 type ModelTrainerConfig struct {
 	DBConfig
 	LoggerConfig
+	S3Config
 
 	RabbitURL      string `env:"RABBIT_URL_MT"  env-required:"true"`
 	RabbitPoolSize int    `env:"RABBIT_POOL_SIZE_MT"  env-default:"10"`
@@ -34,6 +36,18 @@ func (c ModelTrainerConfig) ToDBConfig() postgresql.DBConfig {
 		MaxConnectionAttempts: c.MaxConnectionAttempts,
 		AutoMigrate:           c.AutoMigrate,
 		MigrationsDir:         c.MigrationsDir,
+	}
+}
+
+func (c ModelTrainerConfig) ToS3Config() s3_client.ConfigS3 {
+	return s3_client.ConfigS3{
+		Region:            c.S3Config.Region,
+		S3Host:            c.S3Config.S3Host,
+		PartitionID:       c.S3Config.PartitionID,
+		HostnameImmutable: c.S3Config.HostnameImmutable,
+		Bucket:            c.S3Config.BucketName,
+		AccessKeyID:       c.S3Config.AccessKeyID,
+		SecretAccessKey:   c.S3Config.SecretAccessKey,
 	}
 }
 

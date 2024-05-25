@@ -8,6 +8,7 @@ import (
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/logger"
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/postgresql"
 	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/rabbitmq"
+	"github.com/garet2gis/fatigue-detection-system/model_handler_service/pkg/s3_client"
 	"github.com/go-co-op/gocron"
 	"github.com/urfave/cli/v2"
 	"time"
@@ -39,8 +40,13 @@ func Action(_ *cli.Context) error {
 		l.Fatal(err.Error())
 	}
 
+	s3Client, err := s3_client.NewS3Client(context.Background(), cfg.ToS3Config())
+	if err != nil {
+		l.Fatal(err.Error())
+	}
+
 	scheduler := gocron.NewScheduler(time.UTC)
-	trainer := workers.NewModelTrainer(data.NewRepository(dbClient), dbClient, rabbit, scheduler, cfg.ModelTrainThresholds, l)
+	trainer := workers.NewModelTrainer(data.NewRepository(dbClient), s3Client, dbClient, rabbit, scheduler, cfg.ModelTrainThresholds, l)
 	if err != nil {
 		l.Fatal(err.Error())
 	}
